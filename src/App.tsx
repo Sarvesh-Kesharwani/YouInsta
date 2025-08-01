@@ -37,6 +37,16 @@ export interface MemorizedClip {
   timestamp: number;
 }
 
+export interface WatchedClip {
+  id: string;
+  videoName: string;
+  startTime: number;
+  endTime: number;
+  category: 'relax' | 'study';
+  timestamp: number;
+  watchPercentage: number;
+}
+
 export interface CoinData {
   totalCoins: number;
   earnedToday: number;
@@ -80,6 +90,7 @@ function App() {
   });
   const [isAppStarted, setIsAppStarted] = useState(false);
   const [memorizedClips, setMemorizedClips] = useState<MemorizedClip[]>([]);
+  const [watchedClips, setWatchedClips] = useState<WatchedClip[]>([]);
   const [coinData, setCoinData] = useState<CoinData>({
     totalCoins: 0,
     earnedToday: 0,
@@ -136,6 +147,7 @@ function App() {
   });
   
   const [memorizedClipsFileHandle, setMemorizedClipsFileHandle] = useState<any>(null);
+  const [watchedClipsFileHandle, setWatchedClipsFileHandle] = useState<any>(null);
 
   // Load saved directories on app start
   useEffect(() => {
@@ -148,6 +160,7 @@ function App() {
         const savedStudy = localStorage.getItem('youinsta_study_dirs');
         const savedCombined = localStorage.getItem('youinsta_combined_dir');
         const savedMemorizedClips = localStorage.getItem('youinsta_memorized_clips');
+        const savedWatchedClips = localStorage.getItem('youinsta_watched_clips');
         const savedCoinData = localStorage.getItem('youinsta_coin_data');
         
         let hasSavedDirectories = false;
@@ -185,6 +198,12 @@ function App() {
           console.log(`Loaded ${parsed.length} memorized clips from localStorage (fallback)`);
         }
 
+        if (savedWatchedClips) {
+          const parsed = JSON.parse(savedWatchedClips);
+          setWatchedClips(parsed);
+          console.log(`Loaded ${parsed.length} watched clips from localStorage`);
+        }
+
         if (savedCoinData) {
           const parsed = JSON.parse(savedCoinData);
           setCoinData(parsed);
@@ -212,6 +231,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('youinsta_memorized_clips', JSON.stringify(memorizedClips));
     
+    // Check for duplicates whenever memorized clips change
+    if (memorizedClips.length > 0) {
+      checkForDuplicateClips();
+    }
+    
     // Also save to JSON file if we have a file handle
     if (memorizedClipsFileHandle && memorizedClips.length > 0) {
       const saveToFile = async () => {
@@ -229,6 +253,28 @@ function App() {
       saveToFile();
     }
   }, [memorizedClips, memorizedClipsFileHandle]);
+
+  // Update watched clips in localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('youinsta_watched_clips', JSON.stringify(watchedClips));
+    
+    // Also save to JSON file if we have a file handle
+    if (watchedClipsFileHandle && watchedClips.length > 0) {
+      const saveToFile = async () => {
+        try {
+          const writable = await watchedClipsFileHandle.createWritable();
+          await writable.write(JSON.stringify(watchedClips, null, 2));
+          await writable.close();
+          console.log('Automatically saved watched clips to JSON file');
+        } catch (error) {
+          console.error('Error auto-saving watched clips to file:', error);
+          // Clear the file handle if there's an error
+          setWatchedClipsFileHandle(null);
+        }
+      };
+      saveToFile();
+    }
+  }, [watchedClips, watchedClipsFileHandle]);
 
   // Save directories to localStorage whenever they change
   useEffect(() => {
@@ -527,6 +573,186 @@ function App() {
     }
   };
 
+  // Function to save watched clips to file
+  const saveWatchedClipsToFile = async () => {
+    try {
+      const data = JSON.stringify(watchedClips, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'youinsta_watched_clips.json',
+        types: [{
+          description: 'JSON File',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      
+      setWatchedClipsFileHandle(handle);
+      
+      console.log('Watched clips saved to file successfully!');
+    } catch (error) {
+      console.error('Error saving watched clips to file:', error);
+    }
+  };
+
+  // Function to load watched clips from file
+  const loadWatchedClipsFromFile = async () => {
+    try {
+      const [fileHandle] = await window.showOpenFilePicker({
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }],
+        multiple: false
+      });
+
+      const file = await fileHandle.getFile();
+      const content = await file.text();
+      const parsedClips = JSON.parse(content);
+
+      if (Array.isArray(parsedClips)) {
+        setWatchedClips(parsedClips);
+        setWatchedClipsFileHandle(fileHandle);
+        console.log(`Loaded ${parsedClips.length} watched clips from file`);
+      } else {
+        console.warn('File does not contain valid watched clips array');
+      }
+    } catch (error) {
+      console.error('Error loading watched clips from file:', error);
+    }
+  };
+
+  // Function to create a sample watched_clips.json file
+  const createSampleWatchedClipsFile = async () => {
+    try {
+      const sampleClips: WatchedClip[] = [
+        {
+          id: 'sample1',
+          videoName: 'sample_video.mp4',
+          startTime: 10,
+          endTime: 30,
+          category: 'relax',
+          timestamp: Date.now(),
+          watchPercentage: 85
+        }
+      ];
+      
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'watched_clips.json',
+        types: [{
+          description: 'JSON File',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      
+      const blob = new Blob([JSON.stringify(sampleClips, null, 2)], { type: 'application/json' });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      
+      console.log('Sample watched_clips.json file created successfully');
+      alert('Sample watched_clips.json file created! You can now place this file in your directory and use the Upload button.');
+    } catch (error) {
+      console.error('Error creating sample file:', error);
+      alert('Failed to create sample file. Please try again.');
+    }
+  };
+
+  // Function to add a clip to watched clips
+  const addToWatchedClips = (currentClip: VideoFile, watchPercentage: number) => {
+    if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
+      return;
+    }
+
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === currentClip.id.split('_clip_')[0]);
+    if (!videoWithRanges) {
+      return;
+    }
+
+    // Check if clip is already in watched list
+    const existingClip = watchedClips.find(clip =>
+      clip.videoName === videoWithRanges.video.name &&
+      clip.startTime === currentClip.startTime &&
+      clip.endTime === currentClip.endTime
+    );
+
+    if (existingClip) {
+      // Update the watch percentage if it's higher
+      if (watchPercentage > existingClip.watchPercentage) {
+        setWatchedClips(prev => prev.map(clip =>
+          clip.id === existingClip.id
+            ? { ...clip, watchPercentage, timestamp: Date.now() }
+            : clip
+        ));
+        console.log(`Updated watch percentage for clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) to ${watchPercentage}%`);
+      }
+    } else {
+      // Add new watched clip
+      const watchedClip: WatchedClip = {
+        id: Math.random().toString(36).substr(2, 9),
+        videoName: videoWithRanges.video.name,
+        startTime: currentClip.startTime,
+        endTime: currentClip.endTime,
+        category: videoWithRanges.category,
+        timestamp: Date.now(),
+        watchPercentage
+      };
+
+      setWatchedClips(prev => [...prev, watchedClip]);
+      console.log(`Added clip to watched: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
+    }
+  };
+
+  // Function to check if a clip has been watched (80% or more)
+  const isClipWatched = (currentClip: VideoFile): boolean => {
+    if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
+      return false;
+    }
+
+    const watchedClip = watchedClips.find(clip =>
+      clip.videoName === currentClip.name &&
+      clip.startTime === currentClip.startTime &&
+      clip.endTime === currentClip.endTime
+    );
+
+    return watchedClip ? watchedClip.watchPercentage >= 80 : false;
+  };
+
+  // Function to check if a clip range overlaps with a watched clip (80% or more overlap)
+  const hasOverlappingWatchedClip = (currentClip: VideoFile): boolean => {
+    if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
+      return false;
+    }
+
+    const currentClipDuration = currentClip.endTime - currentClip.startTime;
+    
+    return watchedClips.some(watchedClip => {
+      if (watchedClip.videoName !== currentClip.name) return false;
+      
+      const overlapStart = Math.max(currentClip.startTime!, watchedClip.startTime);
+      const overlapEnd = Math.min(currentClip.endTime!, watchedClip.endTime);
+      const overlapDuration = Math.max(0, overlapEnd - overlapStart);
+      
+      const overlapPercentage = (overlapDuration / currentClipDuration) * 100;
+      return overlapPercentage >= 80;
+    });
+  };
+
+  // Function to handle quiz answers
+  const handleQuizAnswer = (isCorrect: boolean) => {
+    if (isCorrect) {
+      addCoins(1);
+      console.log('Correct answer! +1 coin');
+    } else {
+      removeCoins(1);
+      console.log('Incorrect answer! -1 coin');
+    }
+  };
+
   // Save combined directory to localStorage whenever it changes
   useEffect(() => {
     if (combinedDirectory) {
@@ -593,11 +819,61 @@ function App() {
       return false;
     }
     
-    return memorizedClips.some(clip => 
+    const isMemorized = memorizedClips.some(clip => 
       clip.videoName === currentClip.name &&
       clip.startTime === currentClip.startTime &&
       clip.endTime === currentClip.endTime
     );
+    
+    if (isMemorized) {
+      console.log(`Clip is already memorized: ${currentClip.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
+    }
+    
+    return isMemorized;
+  };
+
+  // Function to check for duplicate clips in memorized list
+  const checkForDuplicateClips = () => {
+    const duplicates: { [key: string]: MemorizedClip[] } = {};
+    
+    memorizedClips.forEach(clip => {
+      const key = `${clip.videoName}_${clip.startTime}_${clip.endTime}`;
+      if (!duplicates[key]) {
+        duplicates[key] = [];
+      }
+      duplicates[key].push(clip);
+    });
+    
+    const actualDuplicates = Object.values(duplicates).filter(clips => clips.length > 1);
+    
+    if (actualDuplicates.length > 0) {
+      console.warn('Found duplicate clips in memorized list:', actualDuplicates);
+      return actualDuplicates;
+    } else {
+      console.log('No duplicate clips found in memorized list');
+      return [];
+    }
+  };
+
+  // Function to remove duplicate clips from memorized list
+  const removeDuplicateClips = () => {
+    const uniqueClips: MemorizedClip[] = [];
+    const seenKeys = new Set<string>();
+    
+    memorizedClips.forEach(clip => {
+      const key = `${clip.videoName}_${clip.startTime}_${clip.endTime}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueClips.push(clip);
+      } else {
+        console.log(`Removing duplicate clip: ${clip.videoName} (${clip.startTime}s - ${clip.endTime}s)`);
+      }
+    });
+    
+    if (uniqueClips.length !== memorizedClips.length) {
+      setMemorizedClips(uniqueClips);
+      console.log(`Removed ${memorizedClips.length - uniqueClips.length} duplicate clips`);
+    }
   };
 
   // Function to add or remove from memorized (toggle functionality)
@@ -620,12 +896,25 @@ function App() {
       if (clipToRemove) {
         setMemorizedClips(prev => prev.filter(clip => clip.id !== clipToRemove.id));
         removeCoins(1); // Remove 1 coin
+        console.log(`Removed clip from memorized: ${currentClip.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
       }
     } else {
-      // Add to memorized
+      // Add to memorized - Check for duplicates before adding
       const videoWithRanges = videoRanges.find(vr => vr.video.id === currentClip.id.split('_clip_')[0]);
       if (!videoWithRanges) {
         return; // Silently return without popup
+      }
+
+      // Explicit duplicate check before adding
+      const existingClip = memorizedClips.find(clip => 
+        clip.videoName === videoWithRanges.video.name &&
+        clip.startTime === currentClip.startTime &&
+        clip.endTime === currentClip.endTime
+      );
+
+      if (existingClip) {
+        console.log(`Clip already exists in memorized list: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
+        return; // Don't add duplicate
       }
 
       const memorizedClip: MemorizedClip = {
@@ -639,6 +928,7 @@ function App() {
 
       setMemorizedClips(prev => [...prev, memorizedClip]);
       addCoins(1); // Add 1 coin
+      console.log(`Added clip to memorized: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
     }
   };
 
@@ -1905,6 +2195,24 @@ function App() {
               </button>
             </div>
 
+            {/* Duplicate Management Buttons */}
+            <div className="duplicate-management-buttons">
+              <button 
+                className="check-duplicates-btn"
+                onClick={checkForDuplicateClips}
+                title="Check for duplicate clips in memorized list"
+              >
+                🔍 Check Duplicates
+              </button>
+              <button 
+                className="remove-duplicates-btn"
+                onClick={removeDuplicateClips}
+                title="Remove duplicate clips from memorized list"
+              >
+                🧹 Remove Duplicates
+              </button>
+            </div>
+
             {/* Coin Management Buttons */}
             <div className="coin-file-buttons">
               <button 
@@ -1963,6 +2271,56 @@ function App() {
             )}
           </div>
 
+          {/* Watched Clips Section */}
+          <div className="watched-section">
+            <h2>👁️ Watched Clips</h2>
+            
+            {/* File Management Buttons */}
+            <div className="watched-file-buttons">
+              <button 
+                className="load-watched-btn"
+                onClick={loadWatchedClipsFromFile}
+                title="Load watched clips from file"
+              >
+                📂 Load from File
+              </button>
+              <button 
+                className="save-watched-btn"
+                onClick={saveWatchedClipsToFile}
+                title="Save watched clips to file"
+              >
+                💾 Save to File
+              </button>
+              <button 
+                className="create-watched-sample-btn"
+                onClick={createSampleWatchedClipsFile}
+                title="Create a sample watched_clips.json file"
+              >
+                📝 Create Sample File
+              </button>
+            </div>
+            
+            {watchedClips.length > 0 ? (
+              <div className="watched-clips-list">
+                {watchedClips.map((clip) => (
+                  <div key={clip.id} className="watched-clip-item">
+                    <div className="clip-info">
+                      <span className="clip-name">{clip.videoName}</span>
+                      <span className="clip-time">
+                        {Math.floor(clip.startTime / 60)}:{(clip.startTime % 60).toString().padStart(2, '0')} - 
+                        {Math.floor(clip.endTime / 60)}:{(clip.endTime % 60).toString().padStart(2, '0')}
+                      </span>
+                      <span className="clip-category">{clip.category}</span>
+                      <span className="watch-percentage">Watched: {clip.watchPercentage}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-watched">No clips watched yet. Start the app and watch clips to 80% or more to track them!</p>
+            )}
+          </div>
+
           <div className="start-button-container">
             <button 
               className="start-button"
@@ -1991,6 +2349,9 @@ function App() {
           memorizedClips={memorizedClips}
           coinData={coinData}
           isClipMemorized={isClipMemorized}
+          addToWatchedClips={addToWatchedClips}
+          hasOverlappingWatchedClip={hasOverlappingWatchedClip}
+          onQuizAnswer={handleQuizAnswer}
         />
       )}
     </div>

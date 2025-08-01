@@ -817,6 +817,47 @@
   box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
 }
 
+/* Duplicate Management Buttons */
+.duplicate-management-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.check-duplicates-btn,
+.remove-duplicates-btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  min-width: 140px;
+}
+
+.check-duplicates-btn:hover,
+.remove-duplicates-btn:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+}
+
+.remove-duplicates-btn {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+}
+
+.remove-duplicates-btn:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+}
+
 .memorized-section h2 {
   margin: 0 0 20px 0;
   font-size: 1.3rem;
@@ -945,6 +986,17 @@
   padding: 6px 12px;
   font-size: 11px;
 }
+
+  .duplicate-management-buttons {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .check-duplicates-btn,
+  .remove-duplicates-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
   
   .memorized-clip-item {
     padding: 10px 12px;
@@ -985,6 +1037,17 @@
   .load-memorized-btn,
   .save-memorized-btn,
   .create-sample-btn {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+
+  .duplicate-management-buttons {
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .check-duplicates-btn,
+  .remove-duplicates-btn {
     padding: 5px 10px;
     font-size: 10px;
   }
@@ -1132,5 +1195,202 @@
   
   .coin-info .coin-earned-today {
     font-size: 12px;
+  }
+}
+
+/* Watched Clips Section */
+.watched-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 25px;
+  margin: 20px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.watched-file-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.load-watched-btn,
+.save-watched-btn,
+.create-watched-sample-btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  min-width: 140px;
+}
+
+.load-watched-btn:hover,
+.save-watched-btn:hover,
+.create-watched-sample-btn:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.save-watched-btn {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+}
+
+.save-watched-btn:hover {
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.create-watched-sample-btn {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.create-watched-sample-btn:hover {
+  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+}
+
+.watched-section h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.3rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  color: white;
+}
+
+.watched-clips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.watched-clip-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+}
+
+.watched-clip-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.watch-percentage {
+  font-size: 12px;
+  color: #4ade80;
+  font-weight: 600;
+  background: rgba(74, 222, 128, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.no-watched {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+  margin: 20px 0;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive styles for watched clips */
+@media (max-width: 768px) {
+  .watched-section {
+    padding: 20px;
+    margin: 15px 0;
+  }
+  
+  .watched-section h2 {
+    font-size: 1.2rem;
+  }
+  
+  .watched-file-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .load-watched-btn,
+  .save-watched-btn,
+  .create-watched-sample-btn {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .watched-clip-item {
+    padding: 10px 12px;
+  }
+  
+  .clip-name {
+    font-size: 13px;
+  }
+  
+  .clip-time {
+    font-size: 11px;
+  }
+  
+  .clip-category {
+    font-size: 11px;
+  }
+  
+  .watch-percentage {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .watched-section {
+    padding: 15px;
+    margin: 10px 0;
+  }
+  
+  .watched-section h2 {
+    font-size: 1.1rem;
+  }
+  
+  .watched-file-buttons {
+    gap: 6px;
+  }
+  
+  .load-watched-btn,
+  .save-watched-btn,
+  .create-watched-sample-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .watched-clip-item {
+    padding: 8px 10px;
+  }
+  
+  .clip-name {
+    font-size: 12px;
+  }
+  
+  .clip-time {
+    font-size: 10px;
+  }
+  
+  .clip-category {
+    font-size: 10px;
+  }
+  
+  .watch-percentage {
+    font-size: 10px;
   }
 } 

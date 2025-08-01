@@ -6,9 +6,11 @@ interface VideoPlayerProps {
   video: VideoFile;
   isPlaying: boolean;
   onPlayPause: () => void;
+  onProgressUpdate?: (progress: number) => void;
+  onReach80Percent?: () => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause, onProgressUpdate, onReach80Percent }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -58,12 +60,37 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
         const relativeTime = videoElement.currentTime - video.startTime;
         setCurrentTime(relativeTime);
         
+        // Calculate progress percentage
+        const clipDuration = video.endTime! - video.startTime;
+        const progressPercentage = (relativeTime / clipDuration) * 100;
+        
+        // Call progress update callback
+        if (onProgressUpdate) {
+          onProgressUpdate(progressPercentage);
+        }
+        
+        // Check if we've reached 80% and call the callback
+        if (progressPercentage >= 80 && onReach80Percent) {
+          onReach80Percent();
+        }
+        
         // Check if we've reached the end of the clip
         if (video.endTime && videoElement.currentTime >= video.endTime) {
           videoElement.currentTime = video.startTime;
         }
       } else {
         setCurrentTime(videoElement.currentTime);
+        
+        // Calculate progress percentage for full videos
+        const progressPercentage = (videoElement.currentTime / videoElement.duration) * 100;
+        
+        if (onProgressUpdate) {
+          onProgressUpdate(progressPercentage);
+        }
+        
+        if (progressPercentage >= 80 && onReach80Percent) {
+          onReach80Percent();
+        }
       }
     };
 

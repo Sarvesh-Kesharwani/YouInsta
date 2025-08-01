@@ -17,6 +17,9 @@ interface VideoFeedProps {
   memorizedClips: MemorizedClip[];
   coinData: CoinData;
   isClipMemorized: (currentClip: VideoFile) => boolean;
+  addToWatchedClips: (currentClip: VideoFile, watchPercentage: number) => void;
+  hasOverlappingWatchedClip: (currentClip: VideoFile) => boolean;
+  onQuizAnswer: (isCorrect: boolean) => void;
 }
 
 const VideoFeed: React.FC<VideoFeedProps> = ({ 
@@ -27,7 +30,10 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   onClear, 
   addToMemorized,
   coinData,
-  isClipMemorized
+  isClipMemorized,
+  addToWatchedClips,
+  hasOverlappingWatchedClip,
+  onQuizAnswer
 }) => {
   const [currentVideo, setCurrentVideo] = useState<VideoFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -39,6 +45,10 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   const [isMemorizeButtonDisabled, setIsMemorizeButtonDisabled] = useState(false);
   const memorizeButtonRef = useRef<HTMLButtonElement>(null);
   const coinDisplayRef = useRef<HTMLDivElement>(null);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizAnswered, setQuizAnswered] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [hasReached80Percent, setHasReached80Percent] = useState(false);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
@@ -108,6 +118,22 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
     } else if (e.key === ' ') {
       e.preventDefault();
       setIsPlaying(prev => !prev);
+    }
+  };
+
+  const handleQuizAnswer = (answer: boolean) => {
+    if (currentVideo && !quizAnswered) {
+      const hasOverlap = hasOverlappingWatchedClip(currentVideo);
+      const isCorrect = answer === hasOverlap;
+      
+      onQuizAnswer(isCorrect);
+      setQuizAnswered(true);
+      
+      // Hide quiz after a short delay
+      setTimeout(() => {
+        setShowQuiz(false);
+        setQuizAnswered(false);
+      }, 2000);
     }
   };
 
@@ -181,6 +207,23 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
     initializeVideo();
   }, [videoRanges, currentVideo, getInitialClip]);
 
+  // Show quiz for all clips
+  useEffect(() => {
+    if (currentVideo) {
+      setShowQuiz(true);
+      setQuizAnswered(false);
+    } else {
+      setShowQuiz(false);
+      setQuizAnswered(false);
+    }
+  }, [currentVideo]);
+
+  // Reset 80% flag when video changes
+  useEffect(() => {
+    setHasReached80Percent(false);
+    setVideoProgress(0);
+  }, [currentVideo]);
+
   if (!currentVideo) {
     return (
       <div className="video-feed">
@@ -223,6 +266,13 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
           video={currentVideo}
           isPlaying={isPlaying}
           onPlayPause={() => setIsPlaying(!isPlaying)}
+          onProgressUpdate={setVideoProgress}
+          onReach80Percent={() => {
+            if (currentVideo && !hasReached80Percent) {
+              setHasReached80Percent(true);
+              addToWatchedClips(currentVideo, 80);
+            }
+          }}
         />
         
         <div className="video-overlay">
@@ -241,16 +291,6 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
             </button>
             
             <button 
-              className={`control-btn memorize-btn ${isCurrentClipMemorized ? 'memorized' : ''}`}
-              onClick={handleMemorizeClick}
-              title={isCurrentClipMemorized ? "Remove from memorized" : "Memorize this clip"}
-              disabled={!currentVideo?.isClip || isMemorizeButtonDisabled}
-              ref={memorizeButtonRef}
-            >
-              🧠
-            </button>
-            
-            <button 
               className="control-btn"
               onClick={onClear}
               title="Clear all videos"
@@ -259,6 +299,31 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Quiz for repeated clips */}
+        {showQuiz && (
+          <div className="quiz-overlay">
+            <div className="quiz-content">
+              <p className="quiz-question">Have you watched this clip range before?</p>
+              <div className="quiz-buttons">
+                <button 
+                  className={`quiz-btn ${quizAnswered ? 'answered' : ''}`}
+                  onClick={() => handleQuizAnswer(true)}
+                  disabled={quizAnswered}
+                >
+                  Yes
+                </button>
+                <button 
+                  className={`quiz-btn ${quizAnswered ? 'answered' : ''}`}
+                  onClick={() => handleQuizAnswer(false)}
+                  disabled={quizAnswered}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="navigation-hints">
           <div className="hint">
