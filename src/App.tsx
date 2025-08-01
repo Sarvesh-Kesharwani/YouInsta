@@ -4,6 +4,13 @@ import VideoFeed from './components/VideoFeed';
 import UploadArea from './components/UploadArea';
 import './App.css';
 
+// Type declarations for File System Access API
+declare global {
+  interface Window {
+    showDirectoryPicker(options?: { startIn?: string }): Promise<any>;
+  }
+}
+
 export interface VideoFile {
   id: string;
   file: File;
@@ -32,6 +39,13 @@ export interface ClipQueue {
   preloadedVideos: Set<string>; // Track which video files are currently loaded
 }
 
+interface DirectoryInfo {
+  path: string;
+  name: string;
+  lastSelected: number;
+  handle?: any; // Store the directory handle for persistence
+}
+
 function App() {
   const [entertainmentVideos, setEntertainmentVideos] = useState<VideoFile[]>([]);
   const [studyVideos, setStudyVideos] = useState<VideoFile[]>([]);
@@ -44,6 +58,301 @@ function App() {
     preloadedVideos: new Set()
   });
   const [isAppStarted, setIsAppStarted] = useState(false);
+  
+  // Directory persistence
+  const [entertainmentDirectories, setEntertainmentDirectories] = useState<DirectoryInfo[]>([]);
+  const [studyDirectories, setStudyDirectories] = useState<DirectoryInfo[]>([]);
+  const [isLoadingDirectories, setIsLoadingDirectories] = useState(false);
+
+  // Load saved directories on app start
+  useEffect(() => {
+    const loadSavedDirectories = async () => {
+      try {
+        const savedEntertainment = localStorage.getItem('youinsta_entertainment_dirs');
+        const savedStudy = localStorage.getItem('youinsta_study_dirs');
+        
+        let hasSavedDirectories = false;
+        
+        if (savedEntertainment) {
+          const parsed = JSON.parse(savedEntertainment);
+          setEntertainmentDirectories(parsed);
+          
+          if (parsed.length > 0) {
+            hasSavedDirectories = true;
+            console.log(`Found ${parsed.length} saved entertainment directories`);
+          }
+        }
+        
+        if (savedStudy) {
+          const parsed = JSON.parse(savedStudy);
+          setStudyDirectories(parsed);
+          
+          if (parsed.length > 0) {
+            hasSavedDirectories = true;
+            console.log(`Found ${parsed.length} saved study directories`);
+          }
+        }
+        
+        // If we have saved directories, show a notification and restore them
+        if (hasSavedDirectories) {
+          const shouldRestore = confirm(
+            'Found previously selected directories. Would you like to restore them? (You will need to reselect each directory for security reasons)'
+          );
+          
+          if (shouldRestore) {
+            if (savedEntertainment) {
+              const parsed = JSON.parse(savedEntertainment);
+              if (parsed.length > 0) {
+                await loadVideosFromSavedDirectories(parsed, 'entertainment');
+              }
+            }
+            
+            if (savedStudy) {
+              const parsed = JSON.parse(savedStudy);
+              if (parsed.length > 0) {
+                await loadVideosFromSavedDirectories(parsed, 'study');
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading saved directories:', error);
+      }
+    };
+    
+    loadSavedDirectories();
+  }, []);
+
+  // Save directories to localStorage whenever they change
+  useEffect(() => {
+    // Don't save the handle as it can't be serialized
+    const directoriesToSave = entertainmentDirectories.map(dir => ({
+      path: dir.path,
+      name: dir.name,
+      lastSelected: dir.lastSelected
+    }));
+    localStorage.setItem('youinsta_entertainment_dirs', JSON.stringify(directoriesToSave));
+  }, [entertainmentDirectories]);
+
+  useEffect(() => {
+    // Don't save the handle as it can't be serialized
+    const directoriesToSave = studyDirectories.map(dir => ({
+      path: dir.path,
+      name: dir.name,
+      lastSelected: dir.lastSelected
+    }));
+    localStorage.setItem('youinsta_study_dirs', JSON.stringify(directoriesToSave));
+  }, [studyDirectories]);
+
+  // Function to recursively find all video files in a directory
+  const findVideosInDirectory = async (dirHandle: any): Promise<File[]> => {
+    const videos: File[] = [];
+    
+    try {
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === 'file') {
+          const file = await entry.getFile();
+          if (file.type.startsWith('video/')) {
+            videos.push(file);
+          }
+        } else if (entry.kind === 'directory') {
+          // Recursively search subdirectories
+          const subVideos = await findVideosInDirectory(entry);
+          videos.push(...subVideos);
+        }
+      }
+    } catch (error) {
+      console.error('Error reading directory:', error);
+    }
+    
+    return videos;
+  };
+
+  // Function to load videos from saved directories (for app restart)
+  const loadVideosFromSavedDirectories = async (directories: DirectoryInfo[], category: 'entertainment' | 'study') => {
+    setIsLoadingDirectories(true);
+    
+    try {
+      const allVideos: VideoFile[] = [];
+      
+      for (const dirInfo of directories) {
+        try {
+          // For saved directories, we need to prompt the user to reselect
+          // because File System Access API handles can't be serialized
+          const dirHandle = await window.showDirectoryPicker({
+            startIn: dirInfo.path
+          });
+          
+          // Find all videos in this directory
+          const videoFiles = await findVideosInDirectory(dirHandle);
+          
+          // Convert to VideoFile objects
+          const videoObjects: VideoFile[] = videoFiles.map(file => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file,
+            url: URL.createObjectURL(file),
+            name: file.name
+          }));
+          
+          allVideos.push(...videoObjects);
+          
+          // Update directory info with new handle
+          const updatedDirInfo = { ...dirInfo, handle: dirHandle, lastSelected: Date.now() };
+          if (category === 'entertainment') {
+            setEntertainmentDirectories(prev => 
+              prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
+            );
+          } else {
+            setStudyDirectories(prev => 
+              prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
+            );
+          }
+          
+        } catch (error) {
+          console.error(`Error loading directory ${dirInfo.path}:`, error);
+          // Remove the problematic directory
+          if (category === 'entertainment') {
+            setEntertainmentDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
+          } else {
+            setStudyDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
+          }
+        }
+      }
+      
+      // Update the appropriate video state
+      if (category === 'entertainment') {
+        setEntertainmentVideos(allVideos);
+      } else {
+        setStudyVideos(allVideos);
+      }
+      
+    } catch (error) {
+      console.error('Error loading videos from directories:', error);
+    } finally {
+      setIsLoadingDirectories(false);
+    }
+  };
+
+  // Function to load videos from newly selected directories
+  const loadVideosFromDirectories = async (directories: DirectoryInfo[], category: 'entertainment' | 'study') => {
+    setIsLoadingDirectories(true);
+    
+    try {
+      const allVideos: VideoFile[] = [];
+      
+      for (const dirInfo of directories) {
+        try {
+          // Try to get the directory handle
+          const dirHandle = await window.showDirectoryPicker({
+            startIn: dirInfo.path
+          });
+          
+          // Find all videos in this directory
+          const videoFiles = await findVideosInDirectory(dirHandle);
+          
+          // Convert to VideoFile objects
+          const videoObjects: VideoFile[] = videoFiles.map(file => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file,
+            url: URL.createObjectURL(file),
+            name: file.name
+          }));
+          
+          allVideos.push(...videoObjects);
+          
+          // Update directory info
+          const updatedDirInfo = { ...dirInfo, lastSelected: Date.now() };
+          if (category === 'entertainment') {
+            setEntertainmentDirectories(prev => 
+              prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
+            );
+          } else {
+            setStudyDirectories(prev => 
+              prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
+            );
+          }
+          
+        } catch (error) {
+          console.error(`Error loading directory ${dirInfo.path}:`, error);
+          // Remove the problematic directory
+          if (category === 'entertainment') {
+            setEntertainmentDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
+          } else {
+            setStudyDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
+          }
+        }
+      }
+      
+      // Update the appropriate video state
+      if (category === 'entertainment') {
+        setEntertainmentVideos(allVideos);
+      } else {
+        setStudyVideos(allVideos);
+      }
+      
+    } catch (error) {
+      console.error('Error loading videos from directories:', error);
+    } finally {
+      setIsLoadingDirectories(false);
+    }
+  };
+
+  // Function to select a directory
+  const selectDirectory = async (category: 'entertainment' | 'study') => {
+    try {
+      const dirHandle = await window.showDirectoryPicker();
+      
+      // Get directory info
+      const dirInfo: DirectoryInfo = {
+        path: dirHandle.name,
+        name: dirHandle.name,
+        lastSelected: Date.now(),
+        handle: dirHandle // Store the handle for persistence
+      };
+      
+      // Find all videos in the directory
+      const videoFiles = await findVideosInDirectory(dirHandle);
+      
+      if (videoFiles.length === 0) {
+        alert('No video files found in the selected directory.');
+        return;
+      }
+      
+      // Convert to VideoFile objects
+      const videoObjects: VideoFile[] = videoFiles.map(file => ({
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        url: URL.createObjectURL(file),
+        name: file.name
+      }));
+      
+      // Update directory list and videos
+      if (category === 'entertainment') {
+        setEntertainmentDirectories(prev => [...prev, dirInfo]);
+        setEntertainmentVideos(videoObjects);
+      } else {
+        setStudyDirectories(prev => [...prev, dirInfo]);
+        setStudyVideos(videoObjects);
+      }
+      
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Error selecting directory:', error);
+        alert('Error selecting directory. Please try again.');
+      }
+    }
+  };
+
+  // Function to remove a directory
+  const removeDirectory = (path: string, category: 'entertainment' | 'study') => {
+    if (category === 'entertainment') {
+      setEntertainmentDirectories(prev => prev.filter(d => d.path !== path));
+      setEntertainmentVideos([]);
+    } else {
+      setStudyDirectories(prev => prev.filter(d => d.path !== path));
+      setStudyVideos([]);
+    }
+  };
 
   // Helper function to preload video into memory
   const preloadVideo = (videoFile: VideoFile) => {
@@ -286,6 +595,16 @@ function App() {
     setIsAppStarted(false);
   };
 
+  const clearDirectories = () => {
+    setEntertainmentDirectories([]);
+    setStudyDirectories([]);
+    setEntertainmentVideos([]);
+    setStudyVideos([]);
+    setVideoRanges([]);
+    setClipQueue({ clips: [], currentIndex: 0, lastUsed: 0, preloadedVideos: new Set() });
+    setIsAppStarted(false);
+  };
+
   const calculateTimeRanges = (entertainmentVideos: VideoFile[], studyVideos: VideoFile[]) => {
     console.log('Calculating time ranges for', entertainmentVideos.length, 'entertainment videos and', studyVideos.length, 'study videos');
     
@@ -472,6 +791,38 @@ function App() {
           <div className="sections-container">
             <div className="section entertainment-section">
               <h2>🎬 Entertainment</h2>
+              
+              {/* Directory Management */}
+              <div className="directory-section">
+                <h3>📁 Selected Directories</h3>
+                {entertainmentDirectories.length > 0 ? (
+                  <div className="directory-list">
+                    {entertainmentDirectories.map((dir, index) => (
+                      <div key={index} className="directory-item">
+                        <span className="directory-name">{dir.name}</span>
+                        <button 
+                          className="remove-directory-btn"
+                          onClick={() => removeDirectory(dir.path, 'entertainment')}
+                          title="Remove directory"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-directories">No directories selected</p>
+                )}
+                
+                <button 
+                  className="select-directory-btn"
+                  onClick={() => selectDirectory('entertainment')}
+                  disabled={isLoadingDirectories}
+                >
+                  📁 Select Directory
+                </button>
+              </div>
+              
               <UploadArea 
                 getRootProps={getEntertainmentRootProps}
                 getInputProps={getEntertainmentInputProps}
@@ -480,12 +831,44 @@ function App() {
                 compact={true}
               />
               <div className="video-count">
-                {entertainmentVideos.length} video(s) uploaded
+                {entertainmentVideos.length} video(s) from {entertainmentDirectories.length} directory(ies)
               </div>
             </div>
             
             <div className="section study-section">
               <h2>📚 Study</h2>
+              
+              {/* Directory Management */}
+              <div className="directory-section">
+                <h3>📁 Selected Directories</h3>
+                {studyDirectories.length > 0 ? (
+                  <div className="directory-list">
+                    {studyDirectories.map((dir, index) => (
+                      <div key={index} className="directory-item">
+                        <span className="directory-name">{dir.name}</span>
+                        <button 
+                          className="remove-directory-btn"
+                          onClick={() => removeDirectory(dir.path, 'study')}
+                          title="Remove directory"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-directories">No directories selected</p>
+                )}
+                
+                <button 
+                  className="select-directory-btn"
+                  onClick={() => selectDirectory('study')}
+                  disabled={isLoadingDirectories}
+                >
+                  📁 Select Directory
+                </button>
+              </div>
+              
               <UploadArea 
                 getRootProps={getStudyRootProps}
                 getInputProps={getStudyInputProps}
@@ -494,7 +877,7 @@ function App() {
                 compact={true}
               />
               <div className="video-count">
-                {studyVideos.length} video(s) uploaded
+                {studyVideos.length} video(s) from {studyDirectories.length} directory(ies)
               </div>
             </div>
           </div>
@@ -506,6 +889,14 @@ function App() {
               disabled={entertainmentVideos.length === 0 && studyVideos.length === 0}
             >
               🚀 Start Scrolling Experience
+            </button>
+            
+            <button 
+              className="clear-all-btn"
+              onClick={clearDirectories}
+              disabled={entertainmentDirectories.length === 0 && studyDirectories.length === 0}
+            >
+              🗑️ Clear All Directories
             </button>
           </div>
         </div>

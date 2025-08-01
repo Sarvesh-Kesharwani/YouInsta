@@ -103,6 +103,116 @@
   box-shadow: none;
 }
 
+/* Directory Management Styles */
+.directory-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.directory-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.directory-list {
+  margin-bottom: 10px;
+}
+
+.directory-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.directory-name {
+  font-size: 12px;
+  color: #fff;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-directory-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.remove-directory-btn:hover {
+  background: rgba(255, 107, 107, 0.2);
+}
+
+.no-directories {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 10px 0;
+  font-style: italic;
+}
+
+.select-directory-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.select-directory-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.select-directory-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.clear-all-btn {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.clear-all-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+.clear-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .home-screen {
@@ -128,6 +238,24 @@
   .start-button {
     padding: 12px 24px;
     font-size: 0.95rem;
+  }
+
+  .directory-section {
+    padding: 12px;
+  }
+  
+  .directory-item {
+    padding: 6px 10px;
+  }
+  
+  .select-directory-btn {
+    padding: 8px 14px;
+    font-size: 11px;
+  }
+  
+  .clear-all-btn {
+    padding: 8px 16px;
+    font-size: 12px;
   }
 }
 
