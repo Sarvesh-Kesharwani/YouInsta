@@ -143,6 +143,66 @@
   margin-top: 20px;
 }
 
+.clip-duration-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.clip-duration-label {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.clip-duration-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.clip-duration-input {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  width: 60px;
+  text-align: center;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.clip-duration-input:focus {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.clip-duration-input::-webkit-inner-spin-button,
+.clip-duration-input::-webkit-outer-spin-button {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.clip-duration-unit {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .clear-directories-container {
   width: 100%;
   display: flex;
@@ -424,6 +484,30 @@
     font-size: 12px;
     max-width: 350px;
   }
+  
+  .clip-duration-container {
+    gap: 10px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .clip-duration-label {
+    font-size: 13px;
+  }
+  
+  .clip-duration-input-group {
+    padding: 6px 10px;
+  }
+  
+  .clip-duration-input {
+    width: 50px;
+    font-size: 13px;
+    padding: 5px 8px;
+  }
+  
+  .clip-duration-unit {
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -456,6 +540,30 @@
   .start-button {
     padding: 10px 20px;
     font-size: 0.9rem;
+  }
+  
+  .clip-duration-container {
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .clip-duration-label {
+    font-size: 12px;
+  }
+  
+  .clip-duration-input-group {
+    padding: 5px 8px;
+  }
+  
+  .clip-duration-input {
+    width: 45px;
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+  
+  .clip-duration-unit {
+    font-size: 10px;
   }
 }
 

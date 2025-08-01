@@ -76,6 +76,7 @@ function App() {
   const [studyDirectories, setStudyDirectories] = useState<DirectoryInfo[]>([]);
   const [combinedDirectory, setCombinedDirectory] = useState<DirectoryInfo | null>(null);
   const [isLoadingDirectories, setIsLoadingDirectories] = useState(false);
+  const [clipDurationMinutes, setClipDurationMinutes] = useState(2); // Default 2 minutes
 
   // Load saved directories on app start
   useEffect(() => {
@@ -980,7 +981,7 @@ function App() {
     console.log('Calculating time ranges for', relaxVideos.length, 'relax videos and', studyVideos.length, 'study videos');
     
     const videoRanges: VideoWithRanges[] = [];
-    const clipDuration = 120; // 2 minutes in seconds
+    const clipDuration = clipDurationMinutes * 60; // Convert minutes to seconds
 
     // Helper function to get video duration
     const getVideoDuration = (videoFile: VideoFile): Promise<number> => {
@@ -1308,6 +1309,31 @@ function App() {
                 <div className="video-count">
                   {studyVideos.length} video(s) from {studyDirectories.length} directory(ies)
                 </div>
+              </div>
+            </div>
+            
+            {/* Clip Duration Setting */}
+            <div className="clip-duration-container">
+              <label htmlFor="clip-duration-input" className="clip-duration-label">
+                ⏱️ Clip Duration (minutes):
+              </label>
+              <div className="clip-duration-input-group">
+                <input
+                  id="clip-duration-input"
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={clipDurationMinutes}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (value >= 1 && value <= 60) {
+                      setClipDurationMinutes(value);
+                    }
+                  }}
+                  className="clip-duration-input"
+                  title="Set the duration for each video clip in minutes (1-60)"
+                />
+                <span className="clip-duration-unit">minutes</span>
               </div>
             </div>
             
