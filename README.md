@@ -20,6 +20,7 @@ A modern web application that allows you to upload a folder of videos and scroll
 - 📂 **Organized Content**: Support for "relax" and "study" folder structures
 - 💾 **File-based Storage**: Export/import memorized clips as JSON files
 - 🔄 **Combined Upload**: Load videos and memorized clips with a single button
+- ⚙️ **Configuration Persistence**: Automatically save and restore clip duration preferences
 
 ## Supported Video Formats
 
@@ -98,6 +99,12 @@ npm run preview
    - Use "💾 Save to File" to export memorized clips as `memorized_clips.json`
    - Place this file in your directory root for automatic loading with "📁 Upload"
    - Use "📂 Load from File" to manually load memorized clips
+
+5. **Configuration Management**:
+   - Set your preferred clip duration using the "⏱️ Clip Duration" input
+   - Your clip duration preference is automatically saved and restored on app restart
+   - Use "📥 Download Config" to export your current settings as `config.json`
+   - Place `config.json` in your directory root for automatic loading with "📁 Upload"
    - Use "📝 Create Sample File" to generate a template JSON file
 
 2. **Navigate Videos**:

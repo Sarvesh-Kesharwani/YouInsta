@@ -37,6 +37,16 @@ export interface MemorizedClip {
   timestamp: number;
 }
 
+export interface CoinData {
+  totalCoins: number;
+  earnedToday: number;
+  date: string;
+  history: {
+    date: string;
+    coins: number;
+  }[];
+}
+
 export interface VideoWithRanges {
   video: VideoFile;
   timeRanges: VideoTimeRange[];
@@ -70,22 +80,75 @@ function App() {
   });
   const [isAppStarted, setIsAppStarted] = useState(false);
   const [memorizedClips, setMemorizedClips] = useState<MemorizedClip[]>([]);
+  const [coinData, setCoinData] = useState<CoinData>({
+    totalCoins: 0,
+    earnedToday: 0,
+    date: new Date().toDateString(),
+    history: []
+  });
   
   // Directory persistence
   const [relaxDirectories, setRelaxDirectories] = useState<DirectoryInfo[]>([]);
   const [studyDirectories, setStudyDirectories] = useState<DirectoryInfo[]>([]);
   const [combinedDirectory, setCombinedDirectory] = useState<DirectoryInfo | null>(null);
   const [isLoadingDirectories, setIsLoadingDirectories] = useState(false);
-  const [clipDurationMinutes, setClipDurationMinutes] = useState(2); // Default 2 minutes
+  const [clipDurationMinutes, setClipDurationMinutes] = useState(() => {
+    // Try to get the value from localStorage first
+    try {
+      const savedConfig = localStorage.getItem('youinsta_config');
+      if (savedConfig) {
+        const config = JSON.parse(savedConfig);
+        if (config.clipDurationMinutes && typeof config.clipDurationMinutes === 'number') {
+          return config.clipDurationMinutes;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading clip duration from localStorage:', error);
+    }
+    return 2; // Default 2 minutes
+  });
+  
+  // Random clip duration feature
+  const [isRandomClipDurationEnabled, setIsRandomClipDurationEnabled] = useState(() => {
+    try {
+      const savedConfig = localStorage.getItem('youinsta_config');
+      if (savedConfig) {
+        const config = JSON.parse(savedConfig);
+        return config.isRandomClipDurationEnabled || false;
+      }
+    } catch (error) {
+      console.error('Error loading random clip duration setting from localStorage:', error);
+    }
+    return false; // Default disabled
+  });
+  
+  const [randomClipDurationRange, setRandomClipDurationRange] = useState(() => {
+    try {
+      const savedConfig = localStorage.getItem('youinsta_config');
+      if (savedConfig) {
+        const config = JSON.parse(savedConfig);
+        return config.randomClipDurationRange || { min: 1, max: 5 };
+      }
+    } catch (error) {
+      console.error('Error loading random clip duration range from localStorage:', error);
+    }
+    return { min: 1, max: 5 }; // Default 1-5 minutes
+  });
+  
+  const [memorizedClipsFileHandle, setMemorizedClipsFileHandle] = useState<any>(null);
 
   // Load saved directories on app start
   useEffect(() => {
     const loadSavedDirectories = async () => {
       try {
+        // Load config first
+        await loadConfigFromFile();
+        
         const savedRelax = localStorage.getItem('youinsta_relax_dirs');
         const savedStudy = localStorage.getItem('youinsta_study_dirs');
         const savedCombined = localStorage.getItem('youinsta_combined_dir');
         const savedMemorizedClips = localStorage.getItem('youinsta_memorized_clips');
+        const savedCoinData = localStorage.getItem('youinsta_coin_data');
         
         let hasSavedDirectories = false;
         
@@ -98,7 +161,7 @@ function App() {
             console.log(`Found ${parsed.length} saved relax directories`);
           }
         }
-        
+
         if (savedStudy) {
           const parsed = JSON.parse(savedStudy);
           setStudyDirectories(parsed);
@@ -112,50 +175,60 @@ function App() {
         if (savedCombined) {
           const parsed = JSON.parse(savedCombined);
           setCombinedDirectory(parsed);
+          hasSavedDirectories = true;
           console.log('Found saved combined directory');
         }
 
-        // Try to load memorized clips from localStorage as fallback
         if (savedMemorizedClips) {
           const parsed = JSON.parse(savedMemorizedClips);
           setMemorizedClips(parsed);
-          console.log(`Found ${parsed.length} memorized clips in localStorage (fallback)`);
+          console.log(`Loaded ${parsed.length} memorized clips from localStorage (fallback)`);
         }
-        
-        // If we have saved directories, show a notification and restore them
-        if (hasSavedDirectories) {
-          const shouldRestore = confirm(
-            'Found previously selected directories. Would you like to restore them? (You will need to reselect each directory for security reasons)'
-          );
-          
-          if (shouldRestore) {
-            if (savedRelax) {
-              const parsed = JSON.parse(savedRelax);
-              if (parsed.length > 0) {
-                await loadVideosFromSavedDirectories(parsed, 'relax');
-              }
-            }
-            
-            if (savedStudy) {
-              const parsed = JSON.parse(savedStudy);
-              if (parsed.length > 0) {
-                await loadVideosFromSavedDirectories(parsed, 'study');
-              }
-            }
 
-            if (savedCombined) {
-              const parsed = JSON.parse(savedCombined);
-              await loadVideosFromCombinedDirectory(parsed);
-            }
-          }
+        if (savedCoinData) {
+          const parsed = JSON.parse(savedCoinData);
+          setCoinData(parsed);
+          console.log(`Loaded coin data: ${parsed.totalCoins} total coins, ${parsed.earnedToday} earned today`);
+        }
+
+        // Load videos from saved directories if any exist
+        if (hasSavedDirectories) {
+          await loadVideosFromSavedDirectories();
         }
       } catch (error) {
         console.error('Error loading saved directories:', error);
       }
     };
-    
+
     loadSavedDirectories();
   }, []);
+
+  // Update coin data in localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('youinsta_coin_data', JSON.stringify(coinData));
+  }, [coinData]);
+
+  // Update memorized clips in localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('youinsta_memorized_clips', JSON.stringify(memorizedClips));
+    
+    // Also save to JSON file if we have a file handle
+    if (memorizedClipsFileHandle && memorizedClips.length > 0) {
+      const saveToFile = async () => {
+        try {
+          const writable = await memorizedClipsFileHandle.createWritable();
+          await writable.write(JSON.stringify(memorizedClips, null, 2));
+          await writable.close();
+          console.log('Automatically saved memorized clips to JSON file');
+        } catch (error) {
+          console.error('Error auto-saving memorized clips to file:', error);
+          // Clear the file handle if there's an error
+          setMemorizedClipsFileHandle(null);
+        }
+      };
+      saveToFile();
+    }
+  }, [memorizedClips, memorizedClipsFileHandle]);
 
   // Save directories to localStorage whenever they change
   useEffect(() => {
@@ -178,10 +251,14 @@ function App() {
     localStorage.setItem('youinsta_study_dirs', JSON.stringify(directoriesToSave));
   }, [studyDirectories]);
 
-  // Save memorized clips to localStorage as backup whenever they change
+  // Save config to localStorage whenever clip duration changes
   useEffect(() => {
-    localStorage.setItem('youinsta_memorized_clips', JSON.stringify(memorizedClips));
-  }, [memorizedClips]);
+    saveConfigToLocalStorage({ 
+      clipDurationMinutes,
+      isRandomClipDurationEnabled,
+      randomClipDurationRange
+    });
+  }, [clipDurationMinutes, isRandomClipDurationEnabled, randomClipDurationRange]);
 
   // Function to save memorized clips to a JSON file
   const saveMemorizedClipsToFile = async () => {
@@ -202,6 +279,9 @@ function App() {
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
+      
+      // Store the file handle for future automatic saves
+      setMemorizedClipsFileHandle(handle);
       
       console.log('Memorized clips saved to file successfully');
     } catch (error) {
@@ -228,6 +308,8 @@ function App() {
       
       if (Array.isArray(loadedClips)) {
         setMemorizedClips(loadedClips);
+        // Store the file handle for future automatic saves
+        setMemorizedClipsFileHandle(fileHandle);
         console.log(`Loaded ${loadedClips.length} memorized clips from file`);
         alert(`Successfully loaded ${loadedClips.length} memorized clips! 🧠`);
       } else {
@@ -274,6 +356,177 @@ function App() {
     }
   };
 
+  // Function to save coin data to file
+  const saveCoinDataToFile = async () => {
+    try {
+      const fileHandle = await window.showSaveFilePicker({
+        suggestedName: 'coins_earned.json',
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(coinData, null, 2));
+      await writable.close();
+
+      console.log('Coin data saved to file successfully!');
+    } catch (error) {
+      console.error('Error saving coin data to file:', error);
+    }
+  };
+
+  // Function to load coin data from file
+  const loadCoinDataFromFile = async () => {
+    try {
+      const [fileHandle] = await window.showOpenFilePicker({
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }],
+        multiple: false
+      });
+
+      const file = await fileHandle.getFile();
+      const content = await file.text();
+      const parsedData = JSON.parse(content);
+
+      if (parsedData && typeof parsedData === 'object') {
+        setCoinData(parsedData);
+        console.log('Coin data loaded from file successfully!');
+      } else {
+        console.warn('File does not contain valid coin data');
+      }
+    } catch (error) {
+      console.error('Error loading coin data from file:', error);
+    }
+  };
+
+  // Function to create sample coin data file
+  const createSampleCoinDataFile = async () => {
+    try {
+      const sampleData: CoinData = {
+        totalCoins: 15,
+        earnedToday: 5,
+        date: new Date().toDateString(),
+        history: [
+          { date: new Date().toDateString(), coins: 5 },
+          { date: new Date(Date.now() - 86400000).toDateString(), coins: 10 }
+        ]
+      };
+
+      const fileHandle = await window.showSaveFilePicker({
+        suggestedName: 'coins_earned.json',
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(sampleData, null, 2));
+      await writable.close();
+
+      console.log('Sample coins_earned.json file created successfully!');
+    } catch (error) {
+      console.error('Error creating sample coin file:', error);
+    }
+  };
+
+  // Function to load config from file
+  const loadConfigFromFile = async () => {
+    try {
+      const response = await fetch('/config.json');
+      if (!response.ok) {
+        throw new Error('Config file not found');
+      }
+      const config = await response.json();
+      
+      if (config.clipDurationMinutes && typeof config.clipDurationMinutes === 'number') {
+        setClipDurationMinutes(config.clipDurationMinutes);
+        console.log(`Loaded clip duration from config: ${config.clipDurationMinutes} minutes`);
+      }
+      
+      if (config.isRandomClipDurationEnabled !== undefined) {
+        setIsRandomClipDurationEnabled(config.isRandomClipDurationEnabled);
+        console.log(`Loaded random clip duration setting: ${config.isRandomClipDurationEnabled ? 'enabled' : 'disabled'}`);
+      }
+      
+      if (config.randomClipDurationRange && typeof config.randomClipDurationRange.min === 'number' && typeof config.randomClipDurationRange.max === 'number') {
+        setRandomClipDurationRange(config.randomClipDurationRange);
+        console.log(`Loaded random clip duration range: ${config.randomClipDurationRange.min}-${config.randomClipDurationRange.max} minutes`);
+      }
+      
+      return;
+    } catch (error) {
+      console.error('Error loading config from file:', error);
+    }
+    
+    // Fallback to localStorage
+    try {
+      const savedConfig = localStorage.getItem('youinsta_config');
+      if (savedConfig) {
+        const config = JSON.parse(savedConfig);
+        if (config.clipDurationMinutes && typeof config.clipDurationMinutes === 'number') {
+          setClipDurationMinutes(config.clipDurationMinutes);
+          console.log(`Loaded clip duration from localStorage: ${config.clipDurationMinutes} minutes`);
+        }
+        
+        if (config.isRandomClipDurationEnabled !== undefined) {
+          setIsRandomClipDurationEnabled(config.isRandomClipDurationEnabled);
+          console.log(`Loaded random clip duration setting from localStorage: ${config.isRandomClipDurationEnabled ? 'enabled' : 'disabled'}`);
+        }
+        
+        if (config.randomClipDurationRange && typeof config.randomClipDurationRange.min === 'number' && typeof config.randomClipDurationRange.max === 'number') {
+          setRandomClipDurationRange(config.randomClipDurationRange);
+          console.log(`Loaded random clip duration range from localStorage: ${config.randomClipDurationRange.min}-${config.randomClipDurationRange.max} minutes`);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading config from localStorage:', error);
+    }
+  };
+
+  // Function to save config to localStorage
+  const saveConfigToLocalStorage = (config: { 
+    clipDurationMinutes: number;
+    isRandomClipDurationEnabled?: boolean;
+    randomClipDurationRange?: { min: number; max: number };
+  }) => {
+    localStorage.setItem('youinsta_config', JSON.stringify(config));
+    console.log('Config saved to localStorage successfully');
+  };
+
+  // Function to download config file
+  const downloadConfigFile = async () => {
+    try {
+      const config = { 
+        clipDurationMinutes, 
+        isRandomClipDurationEnabled,
+        randomClipDurationRange,
+        version: '1.0.0' 
+      };
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+      
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'config.json',
+        types: [{
+          description: 'JSON File',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      
+      console.log('Config file downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading config file:', error);
+    }
+  };
+
   // Save combined directory to localStorage whenever it changes
   useEffect(() => {
     if (combinedDirectory) {
@@ -288,31 +541,105 @@ function App() {
     }
   }, [combinedDirectory]);
 
-  // Function to add a clip to memorized list
+  // Function to add coins
+  const addCoins = (amount: number) => {
+    const today = new Date().toDateString();
+    
+    setCoinData(prev => {
+      const newHistory = [...prev.history];
+      
+      // Update today's entry or create new one
+      const todayIndex = newHistory.findIndex(entry => entry.date === today);
+      if (todayIndex >= 0) {
+        newHistory[todayIndex].coins += amount;
+      } else {
+        newHistory.push({ date: today, coins: amount });
+      }
+      
+      return {
+        totalCoins: prev.totalCoins + amount,
+        earnedToday: prev.date === today ? prev.earnedToday + amount : amount,
+        date: today,
+        history: newHistory
+      };
+    });
+  };
+
+  // Function to remove coins
+  const removeCoins = (amount: number) => {
+    const today = new Date().toDateString();
+    
+    setCoinData(prev => {
+      const newHistory = [...prev.history];
+      
+      // Update today's entry
+      const todayIndex = newHistory.findIndex(entry => entry.date === today);
+      if (todayIndex >= 0) {
+        newHistory[todayIndex].coins = Math.max(0, newHistory[todayIndex].coins - amount);
+      }
+      
+      return {
+        totalCoins: Math.max(0, prev.totalCoins - amount),
+        earnedToday: prev.date === today ? Math.max(0, prev.earnedToday - amount) : 0,
+        date: today,
+        history: newHistory
+      };
+    });
+  };
+
+  // Function to check if a clip is already memorized
+  const isClipMemorized = (currentClip: VideoFile): boolean => {
+    if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
+      return false;
+    }
+    
+    return memorizedClips.some(clip => 
+      clip.videoName === currentClip.name &&
+      clip.startTime === currentClip.startTime &&
+      clip.endTime === currentClip.endTime
+    );
+  };
+
+  // Function to add or remove from memorized (toggle functionality)
   const addToMemorized = (currentClip: VideoFile) => {
     if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
-      alert('Only video clips can be memorized');
-      return;
+      return; // Silently return without popup
     }
 
-    // Find the video category
-    const videoWithRanges = videoRanges.find(vr => vr.video.id === currentClip.id.split('_clip_')[0]);
-    if (!videoWithRanges) {
-      alert('Could not determine video category');
-      return;
+    // Check if clip is already memorized
+    const isAlreadyMemorized = isClipMemorized(currentClip);
+    
+    if (isAlreadyMemorized) {
+      // Remove from memorized
+      const clipToRemove = memorizedClips.find(clip => 
+        clip.videoName === currentClip.name &&
+        clip.startTime === currentClip.startTime &&
+        clip.endTime === currentClip.endTime
+      );
+      
+      if (clipToRemove) {
+        setMemorizedClips(prev => prev.filter(clip => clip.id !== clipToRemove.id));
+        removeCoins(1); // Remove 1 coin
+      }
+    } else {
+      // Add to memorized
+      const videoWithRanges = videoRanges.find(vr => vr.video.id === currentClip.id.split('_clip_')[0]);
+      if (!videoWithRanges) {
+        return; // Silently return without popup
+      }
+
+      const memorizedClip: MemorizedClip = {
+        id: Math.random().toString(36).substr(2, 9),
+        videoName: videoWithRanges.video.name,
+        startTime: currentClip.startTime,
+        endTime: currentClip.endTime,
+        category: videoWithRanges.category,
+        timestamp: Date.now()
+      };
+
+      setMemorizedClips(prev => [...prev, memorizedClip]);
+      addCoins(1); // Add 1 coin
     }
-
-    const memorizedClip: MemorizedClip = {
-      id: Math.random().toString(36).substr(2, 9),
-      videoName: videoWithRanges.video.name,
-      startTime: currentClip.startTime,
-      endTime: currentClip.endTime,
-      category: videoWithRanges.category,
-      timestamp: Date.now()
-    };
-
-    setMemorizedClips(prev => [...prev, memorizedClip]);
-    alert('Clip memorized! 🧠');
   };
 
   // Function to remove a clip from memorized list
@@ -407,13 +734,13 @@ function App() {
   };
 
   // Function to load videos from saved directories (for app restart)
-  const loadVideosFromSavedDirectories = async (directories: DirectoryInfo[], category: 'relax' | 'study') => {
+  const loadVideosFromSavedDirectories = async () => {
     setIsLoadingDirectories(true);
     
     try {
       const allVideos: VideoFile[] = [];
       
-      for (const dirInfo of directories) {
+      for (const dirInfo of relaxDirectories) {
         try {
           // For saved directories, we need to prompt the user to reselect
           // because File System Access API handles can't be serialized
@@ -436,33 +763,54 @@ function App() {
           
           // Update directory info with new handle
           const updatedDirInfo = { ...dirInfo, handle: dirHandle, lastSelected: Date.now() };
-          if (category === 'relax') {
-            setRelaxDirectories(prev => 
-              prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
-            );
-          } else {
-            setStudyDirectories(prev => 
-              prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
-            );
-          }
+          setRelaxDirectories(prev => 
+            prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
+          );
           
         } catch (error) {
           console.error(`Error loading directory ${dirInfo.path}:`, error);
           // Remove the problematic directory
-          if (category === 'relax') {
-            setRelaxDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
-          } else {
-            setStudyDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
-          }
+          setRelaxDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
+        }
+      }
+      
+      for (const dirInfo of studyDirectories) {
+        try {
+          // For saved directories, we need to prompt the user to reselect
+          // because File System Access API handles can't be serialized
+          const dirHandle = await window.showDirectoryPicker({
+            startIn: dirInfo.path
+          });
+          
+          // Find all videos in this directory
+          const videoFiles = await findVideosInDirectory(dirHandle);
+          
+          // Convert to VideoFile objects
+          const videoObjects: VideoFile[] = videoFiles.map(file => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file,
+            url: URL.createObjectURL(file),
+            name: file.name
+          }));
+          
+          allVideos.push(...videoObjects);
+          
+          // Update directory info with new handle
+          const updatedDirInfo = { ...dirInfo, handle: dirHandle, lastSelected: Date.now() };
+          setStudyDirectories(prev => 
+            prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
+          );
+          
+        } catch (error) {
+          console.error(`Error loading directory ${dirInfo.path}:`, error);
+          // Remove the problematic directory
+          setStudyDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
         }
       }
       
       // Update the appropriate video state
-      if (category === 'relax') {
-        setRelaxVideos(allVideos);
-      } else {
-        setStudyVideos(allVideos);
-      }
+      setRelaxVideos(allVideos);
+      setStudyVideos(allVideos);
       
     } catch (error) {
       console.error('Error loading videos from directories:', error);
@@ -538,42 +886,83 @@ function App() {
   // Function to select a combined directory (with relax and study folders) and load memorized clips
   const selectCombinedDirectory = async () => {
     try {
-      // First, try to load memorized clips from a JSON file in the selected directory
+      // First, try to load memorized clips and coin data from JSON files in the selected directory
       let loadedMemorizedClips: MemorizedClip[] = [];
+      let loadedCoinData: CoinData | null = null;
       
       try {
         const dirHandle = await window.showDirectoryPicker();
         console.log('Selected directory:', dirHandle.name);
         
-        // Look for memorized_clips.json file in the root of the selected directory
-        let jsonFileFound = false;
+        // Look for JSON files in the root of the selected directory
+        let memorizedFileFound = false;
+        let coinFileFound = false;
+        
         for await (const entry of dirHandle.values()) {
           console.log('Checking entry:', entry.name, 'kind:', entry.kind);
-          if (entry.kind === 'file' && entry.name.toLowerCase() === 'memorized_clips.json') {
-            jsonFileFound = true;
-            console.log('Found memorized_clips.json file');
-            try {
-              const file = await entry.getFile();
-              const content = await file.text();
-              console.log('File content length:', content.length);
-              const parsedClips = JSON.parse(content);
-              
-              if (Array.isArray(parsedClips)) {
-                loadedMemorizedClips = parsedClips;
-                console.log(`Successfully loaded ${parsedClips.length} memorized clips from ${entry.name}`);
-              } else {
-                console.warn('memorized_clips.json does not contain an array');
+          
+          if (entry.kind === 'file') {
+            if (entry.name.toLowerCase() === 'memorized_clips.json') {
+              memorizedFileFound = true;
+              console.log('Found memorized_clips.json file');
+              try {
+                const file = await entry.getFile();
+                const content = await file.text();
+                console.log('File content length:', content.length);
+                const parsedClips = JSON.parse(content);
+                
+                if (Array.isArray(parsedClips)) {
+                  loadedMemorizedClips = parsedClips;
+                  // Store the file handle for automatic saves
+                  setMemorizedClipsFileHandle(entry);
+                  console.log(`Successfully loaded ${parsedClips.length} memorized clips from ${entry.name} and set up automatic saving`);
+                } else {
+                  console.warn('memorized_clips.json does not contain an array');
+                }
+              } catch (error) {
+                console.warn('Could not parse memorized_clips.json file:', error);
               }
-            } catch (error) {
-              console.warn('Could not parse memorized_clips.json file:', error);
+            } else if (entry.name.toLowerCase() === 'coins_earned.json') {
+              coinFileFound = true;
+              console.log('Found coins_earned.json file');
+              try {
+                const file = await entry.getFile();
+                const content = await file.text();
+                console.log('Coin file content length:', content.length);
+                const parsedCoinData = JSON.parse(content);
+                
+                if (parsedCoinData && typeof parsedCoinData === 'object') {
+                  loadedCoinData = parsedCoinData;
+                  console.log(`Successfully loaded coin data: ${parsedCoinData.totalCoins} total coins`);
+                } else {
+                  console.warn('coins_earned.json does not contain valid coin data');
+                }
+              } catch (error) {
+                console.warn('Could not parse coins_earned.json file:', error);
+              }
             }
-            break;
           }
         }
         
-        if (!jsonFileFound) {
+        if (!memorizedFileFound) {
           console.log('No memorized_clips.json file found in the selected directory');
           console.log('To create a memorized_clips.json file, use the "💾 Save to File" button in the Memorized Clips section');
+          
+          // Try to create a new memorized_clips.json file in the selected directory
+          try {
+            const newMemorizedFileHandle = await dirHandle.getFileHandle('memorized_clips.json', { create: true });
+            const writable = await newMemorizedFileHandle.createWritable();
+            await writable.write(JSON.stringify([], null, 2));
+            await writable.close();
+            setMemorizedClipsFileHandle(newMemorizedFileHandle);
+            console.log('Created new memorized_clips.json file in the selected directory for automatic saves');
+          } catch (error) {
+            console.log('Could not create memorized_clips.json file (will need manual save)');
+          }
+        }
+        
+        if (!coinFileFound) {
+          console.log('No coins_earned.json file found in the selected directory');
         }
         
         // Get directory info
@@ -638,12 +1027,29 @@ function App() {
         setRelaxVideos(relaxVideos);
         setStudyVideos(studyVideos);
         
-        // Load memorized clips if found
+        // Load memorized clips and coin data if found
         if (loadedMemorizedClips.length > 0) {
           setMemorizedClips(loadedMemorizedClips);
-          console.log(`Successfully loaded ${loadedMemorizedClips.length} memorized clips and ${relaxVideos.length + studyVideos.length} videos! 🧠📁`);
+          // Try to get the file handle for future automatic saves
+          try {
+            const memorizedFileHandle = await dirHandle.getFileHandle('memorized_clips.json');
+            setMemorizedClipsFileHandle(memorizedFileHandle);
+            console.log('Stored memorized_clips.json file handle for automatic saves');
+          } catch (error) {
+            console.log('Could not get file handle for memorized_clips.json (will need manual save)');
+          }
+          console.log(`Successfully loaded ${loadedMemorizedClips.length} memorized clips`);
+        }
+        
+        if (loadedCoinData) {
+          setCoinData(loadedCoinData);
+          console.log(`Successfully loaded coin data: ${loadedCoinData.totalCoins} total coins`);
+        }
+        
+        if (loadedMemorizedClips.length > 0 || loadedCoinData) {
+          console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos, ${loadedMemorizedClips.length} memorized clips, and coin data! 🧠📁🪙`);
         } else {
-          console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos! 📁 (No memorized_clips.json file found)`);
+          console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos! 📁 (No JSON files found)`);
         }
         
       } catch (error) {
@@ -977,11 +1383,25 @@ function App() {
     setIsAppStarted(false);
   };
 
+  // Function to generate random clip duration
+  const getRandomClipDuration = (): number => {
+    if (!isRandomClipDurationEnabled) {
+      return clipDurationMinutes * 60; // Use fixed duration
+    }
+    
+    const minSeconds = randomClipDurationRange.min * 60;
+    const maxSeconds = randomClipDurationRange.max * 60;
+    const randomDuration = Math.floor(Math.random() * (maxSeconds - minSeconds + 1)) + minSeconds;
+    
+    console.log(`Generated random clip duration: ${randomDuration / 60} minutes`);
+    return randomDuration;
+  };
+
   const calculateTimeRanges = (relaxVideos: VideoFile[], studyVideos: VideoFile[]) => {
     console.log('Calculating time ranges for', relaxVideos.length, 'relax videos and', studyVideos.length, 'study videos');
+    console.log('Random clip duration enabled:', isRandomClipDurationEnabled);
     
     const videoRanges: VideoWithRanges[] = [];
-    const clipDuration = clipDurationMinutes * 60; // Convert minutes to seconds
 
     // Helper function to get video duration
     const getVideoDuration = (videoFile: VideoFile): Promise<number> => {
@@ -1014,7 +1434,9 @@ function App() {
         const timeRanges: VideoTimeRange[] = [];
         
         // Generate clips for the entire video duration
-        for (let startTime = 0; startTime < actualDuration; startTime += clipDuration) {
+        let startTime = 0;
+        while (startTime < actualDuration) {
+          const clipDuration = getRandomClipDuration();
           const endTime = Math.min(startTime + clipDuration, actualDuration);
           
           // Only add clips that are at least 30 seconds long
@@ -1024,6 +1446,8 @@ function App() {
               endTime: endTime
             });
           }
+          
+          startTime = endTime;
         }
         
         console.log(`Created ${timeRanges.length} clips for relax video: ${video.name}`);
@@ -1048,7 +1472,9 @@ function App() {
         const timeRanges: VideoTimeRange[] = [];
         
         // Generate clips for the entire video duration
-        for (let startTime = 0; startTime < actualDuration; startTime += clipDuration) {
+        let startTime = 0;
+        while (startTime < actualDuration) {
+          const clipDuration = getRandomClipDuration();
           const endTime = Math.min(startTime + clipDuration, actualDuration);
           
           // Only add clips that are at least 30 seconds long
@@ -1058,6 +1484,8 @@ function App() {
               endTime: endTime
             });
           }
+          
+          startTime = endTime;
         }
         
         console.log(`Created ${timeRanges.length} clips for study video: ${video.name}`);
@@ -1195,6 +1623,25 @@ function App() {
     <div className="app">
       {!isAppStarted ? (
         <div className="home-screen">
+          {/* Coin Display */}
+          <div className="home-coin-display">
+            <div className="coin-info">
+              <div className="coin-count">
+                🪙 {coinData.totalCoins} Coins
+              </div>
+              <div className="coin-earned-today">
+                Today: +{coinData.earnedToday}
+              </div>
+            </div>
+            <div className="coin-history">
+              {coinData.history.slice(-3).map((entry, index) => (
+                <div key={index} className="history-entry">
+                  {entry.date}: +{entry.coins}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Combined Directory Section */}
           {combinedDirectory && (relaxVideos.length > 0 || studyVideos.length > 0) && (
             <div className="combined-directory-section">
@@ -1332,9 +1779,76 @@ function App() {
                   }}
                   className="clip-duration-input"
                   title="Set the duration for each video clip in minutes (1-60)"
+                  disabled={isRandomClipDurationEnabled}
                 />
                 <span className="clip-duration-unit">minutes</span>
               </div>
+              <button 
+                className="download-config-btn"
+                onClick={downloadConfigFile}
+                title="Download current configuration as config.json"
+              >
+                📥 Download Config
+              </button>
+            </div>
+            
+            {/* Random Clip Duration Setting */}
+            <div className="random-clip-duration-container">
+              <div className="random-clip-toggle">
+                <label className="random-clip-label">
+                  <input
+                    type="checkbox"
+                    checked={isRandomClipDurationEnabled}
+                    onChange={(e) => setIsRandomClipDurationEnabled(e.target.checked)}
+                    className="random-clip-checkbox"
+                  />
+                  <span className="random-clip-text">🎲 Random Clip Duration</span>
+                </label>
+              </div>
+              
+              {isRandomClipDurationEnabled && (
+                <div className="random-clip-range">
+                  <label className="range-label">
+                    Range: {randomClipDurationRange.min} - {randomClipDurationRange.max} minutes
+                  </label>
+                  <div className="range-inputs">
+                    <div className="range-input-group">
+                      <label htmlFor="min-range">Min:</label>
+                      <input
+                        id="min-range"
+                        type="number"
+                        min="1"
+                        max={randomClipDurationRange.max}
+                        value={randomClipDurationRange.min}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (value >= 1 && value <= randomClipDurationRange.max) {
+                            setRandomClipDurationRange((prev: { min: number; max: number }) => ({ ...prev, min: value }));
+                          }
+                        }}
+                        className="range-input"
+                      />
+                    </div>
+                    <div className="range-input-group">
+                      <label htmlFor="max-range">Max:</label>
+                      <input
+                        id="max-range"
+                        type="number"
+                        min={randomClipDurationRange.min}
+                        max="10"
+                        value={randomClipDurationRange.max}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (value >= randomClipDurationRange.min && value <= 10) {
+                            setRandomClipDurationRange((prev: { min: number; max: number }) => ({ ...prev, max: value }));
+                          }
+                        }}
+                        className="range-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Combined Directory Button */}
@@ -1388,6 +1902,31 @@ function App() {
                 title="Create a sample memorized_clips.json file"
               >
                 📝 Create Sample File
+              </button>
+            </div>
+
+            {/* Coin Management Buttons */}
+            <div className="coin-file-buttons">
+              <button 
+                className="load-coin-btn"
+                onClick={loadCoinDataFromFile}
+                title="Load coin data from file"
+              >
+                🪙 Load Coins
+              </button>
+              <button 
+                className="save-coin-btn"
+                onClick={saveCoinDataToFile}
+                title="Save coin data to file"
+              >
+                💾 Save Coins
+              </button>
+              <button 
+                className="create-coin-sample-btn"
+                onClick={createSampleCoinDataFile}
+                title="Create a sample coins_earned.json file"
+              >
+                📝 Create Coin Sample
               </button>
             </div>
             
@@ -1450,6 +1989,8 @@ function App() {
           addToMemorized={addToMemorized}
           removeFromMemorized={removeFromMemorized}
           memorizedClips={memorizedClips}
+          coinData={coinData}
+          isClipMemorized={isClipMemorized}
         />
       )}
     </div>

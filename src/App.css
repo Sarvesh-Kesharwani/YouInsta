@@ -203,6 +203,26 @@
   font-weight: 500;
 }
 
+.download-config-btn {
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.download-config-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+  background: linear-gradient(135deg, #1976D2, #1565C0);
+}
+
 .clear-directories-container {
   width: 100%;
   display: flex;
@@ -508,6 +528,11 @@
   .clip-duration-unit {
     font-size: 11px;
   }
+  
+  .download-config-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -564,6 +589,161 @@
   
   .clip-duration-unit {
     font-size: 10px;
+  }
+  
+  .download-config-btn {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+}
+
+/* Random Clip Duration Styles */
+.random-clip-duration-container {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.random-clip-toggle {
+  margin-bottom: 15px;
+}
+
+.random-clip-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: white;
+  font-size: 14px;
+}
+
+.random-clip-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #4ade80;
+  cursor: pointer;
+}
+
+.random-clip-text {
+  user-select: none;
+}
+
+.random-clip-range {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.range-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.range-inputs {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.range-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.range-input-group label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.range-input {
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  font-size: 13px;
+  text-align: center;
+}
+
+.range-input:focus {
+  outline: none;
+  border-color: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+.range-input::-webkit-inner-spin-button,
+.range-input::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* Disabled state for clip duration input */
+.clip-duration-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive design for random clip duration */
+@media (max-width: 768px) {
+  .random-clip-duration-container {
+    padding: 15px;
+    margin: 12px 0;
+  }
+  
+  .random-clip-label {
+    font-size: 13px;
+  }
+  
+  .random-clip-checkbox {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .range-inputs {
+    gap: 12px;
+  }
+  
+  .range-input {
+    width: 55px;
+    padding: 5px 6px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .random-clip-duration-container {
+    padding: 12px;
+    margin: 10px 0;
+  }
+  
+  .random-clip-label {
+    font-size: 12px;
+  }
+  
+  .random-clip-checkbox {
+    width: 15px;
+    height: 15px;
+  }
+  
+  .range-inputs {
+    gap: 10px;
+  }
+  
+  .range-input {
+    width: 50px;
+    padding: 4px 5px;
+    font-size: 11px;
   }
 }
 
@@ -823,5 +1003,134 @@
   
   .clip-category {
     font-size: 9px;
+  }
+} 
+
+/* Home Coin Display */
+.home-coin-display {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.coin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.coin-info .coin-count {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.coin-info .coin-earned-today {
+  font-size: 14px;
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.coin-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.history-entry {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Coin File Buttons */
+.coin-file-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.load-coin-btn,
+.save-coin-btn,
+.create-coin-sample-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+}
+
+.load-coin-btn:hover,
+.save-coin-btn:hover,
+.create-coin-sample-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+}
+
+.save-coin-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.save-coin-btn:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.create-coin-sample-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.create-coin-sample-btn:hover {
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+/* Responsive design for coin display */
+@media (max-width: 768px) {
+  .home-coin-display {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .coin-file-buttons {
+    justify-content: center;
+  }
+  
+  .load-coin-btn,
+  .save-coin-btn,
+  .create-coin-sample-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .coin-file-buttons {
+    flex-direction: column;
+  }
+  
+  .coin-info .coin-count {
+    font-size: 20px;
+  }
+  
+  .coin-info .coin-earned-today {
+    font-size: 12px;
   }
 } 

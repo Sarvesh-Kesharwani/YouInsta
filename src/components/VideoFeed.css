@@ -194,3 +194,93 @@
 .video-error button:hover {
   background: #45a049;
 } 
+
+/* Coin Display */
+.coin-display {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 12px 16px;
+  color: white;
+  z-index: 1000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  min-width: 80px;
+}
+
+.coin-count {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.coin-earned-today {
+  font-size: 12px;
+  opacity: 0.8;
+  color: #4ade80;
+}
+
+/* Coin Animation */
+.coin-animation {
+  position: fixed;
+  top: var(--start-y, 50%);
+  left: var(--start-x, 50%);
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  z-index: 2000;
+  animation: coinMoveToDisplay 1s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes coinMoveToDisplay {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    top: var(--start-y, 50%);
+    left: var(--start-x, 50%);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.2);
+    top: calc(var(--start-y, 50%) + (var(--end-y, 50%) - var(--start-y, 50%)) * 0.5);
+    left: calc(var(--start-x, 50%) + (var(--end-x, 50%) - var(--start-x, 50%)) * 0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+    top: var(--end-y, 50%);
+    left: var(--end-x, 50%);
+  }
+}
+
+/* Memorized Button State */
+.memorize-btn.memorized {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(74, 222, 128, 0.4);
+}
+
+.memorize-btn.memorized:hover {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  transform: scale(1.15);
+}
+
+/* Disabled state for memorize button */
+.memorize-btn:disabled {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  color: #9ca3af;
+  cursor: not-allowed;
+  transform: scale(1);
+  box-shadow: none;
+  opacity: 0.6;
+}
+
+.memorize-btn:disabled:hover {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  transform: scale(1);
+  box-shadow: none;
+} 

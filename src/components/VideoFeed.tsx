@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import VideoPlayer from './VideoPlayer';
-import { VideoFile, VideoWithRanges, MemorizedClip } from '../App';
+import { VideoFile, VideoWithRanges, MemorizedClip, CoinData } from '../App';
 import './VideoFeed.css';
 
 interface VideoFeedProps {
@@ -15,6 +15,8 @@ interface VideoFeedProps {
   addToMemorized: (currentClip: VideoFile) => void;
   removeFromMemorized: (clipId: string) => void;
   memorizedClips: MemorizedClip[];
+  coinData: CoinData;
+  isClipMemorized: (currentClip: VideoFile) => boolean;
 }
 
 const VideoFeed: React.FC<VideoFeedProps> = ({ 
@@ -23,13 +25,20 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   getPreviousClip, 
   getInitialClip, 
   onClear, 
-  addToMemorized
+  addToMemorized,
+  coinData,
+  isClipMemorized
 }) => {
   const [currentVideo, setCurrentVideo] = useState<VideoFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [showCoinAnimation, setShowCoinAnimation] = useState(false);
+  const [coinAnimationStyle, setCoinAnimationStyle] = useState({});
+  const [isMemorizeButtonDisabled, setIsMemorizeButtonDisabled] = useState(false);
+  const memorizeButtonRef = useRef<HTMLButtonElement>(null);
+  const coinDisplayRef = useRef<HTMLDivElement>(null);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
@@ -102,6 +111,46 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
     }
   };
 
+  const handleMemorizeClick = () => {
+    if (currentVideo && !isMemorizeButtonDisabled) {
+      const wasMemorized = isClipMemorized(currentVideo);
+      
+      // Disable button temporarily to prevent rapid clicking
+      setIsMemorizeButtonDisabled(true);
+      
+      addToMemorized(currentVideo);
+      
+      // Show coin animation if adding to memorized (not removing)
+      if (!wasMemorized) {
+        // Get positions for animation
+        const buttonRect = memorizeButtonRef.current?.getBoundingClientRect();
+        const coinDisplayRect = coinDisplayRef.current?.getBoundingClientRect();
+        
+        if (buttonRect && coinDisplayRect) {
+          const startX = buttonRect.left + buttonRect.width / 2;
+          const startY = buttonRect.top + buttonRect.height / 2;
+          const endX = coinDisplayRect.left + coinDisplayRect.width / 2;
+          const endY = coinDisplayRect.top + coinDisplayRect.height / 2;
+          
+          setCoinAnimationStyle({
+            '--start-x': `${startX}px`,
+            '--start-y': `${startY}px`,
+            '--end-x': `${endX}px`,
+            '--end-y': `${endY}px`,
+          } as React.CSSProperties);
+          
+          setShowCoinAnimation(true);
+          setTimeout(() => setShowCoinAnimation(false), 1000);
+        }
+      }
+      
+      // Re-enable button after a short delay
+      setTimeout(() => {
+        setIsMemorizeButtonDisabled(false);
+      }, 500);
+    }
+  };
+
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -142,6 +191,8 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
     );
   }
 
+  const isCurrentClipMemorized = isClipMemorized(currentVideo);
+
   return (
     <div 
       className="video-feed"
@@ -151,6 +202,23 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
       onTouchEnd={onTouchEnd}
     >
       <div className="video-container">
+        {/* Coin Display */}
+        <div className="coin-display" ref={coinDisplayRef}>
+          <div className="coin-count">
+            🪙 {coinData.totalCoins}
+          </div>
+          <div className="coin-earned-today">
+            Today: +{coinData.earnedToday}
+          </div>
+        </div>
+
+        {/* Coin Animation */}
+        {showCoinAnimation && (
+          <div className="coin-animation" style={coinAnimationStyle}>
+            🪙
+          </div>
+        )}
+
         <VideoPlayer
           video={currentVideo}
           isPlaying={isPlaying}
@@ -173,10 +241,11 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
             </button>
             
             <button 
-              className="control-btn"
-              onClick={() => addToMemorized(currentVideo)}
-              title="Memorize this clip"
-              disabled={!currentVideo?.isClip}
+              className={`control-btn memorize-btn ${isCurrentClipMemorized ? 'memorized' : ''}`}
+              onClick={handleMemorizeClick}
+              title={isCurrentClipMemorized ? "Remove from memorized" : "Memorize this clip"}
+              disabled={!currentVideo?.isClip || isMemorizeButtonDisabled}
+              ref={memorizeButtonRef}
             >
               🧠
             </button>

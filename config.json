@@ -1,0 +1,9 @@
+{
+  "clipDurationMinutes": 5,
+  "isRandomClipDurationEnabled": false,
+  "randomClipDurationRange": {
+    "min": 1,
+    "max": 5
+  },
+  "version": "1.0.0"
+} 
