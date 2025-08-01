@@ -1,6 +1,6 @@
 .app {
   width: 100vw;
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #18181a 0%, #23234a 100%);
   position: relative;
   overflow: auto;
@@ -48,7 +48,6 @@
 }
 
 .home-screen {
-  min-height: 100vh;
   width: 100%;
   display: flex;
   flex-direction: column;
