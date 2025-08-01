@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import VideoPlayer from './VideoPlayer';
-import { VideoFile, VideoWithRanges } from '../App';
+import { VideoFile, VideoWithRanges, MemorizedClip } from '../App';
 import './VideoFeed.css';
 
 interface VideoFeedProps {
@@ -12,9 +12,19 @@ interface VideoFeedProps {
   getInitialClip: () => Promise<VideoFile | null>;
   onClear: () => void;
   onAddMore: () => void;
+  addToMemorized: (currentClip: VideoFile) => void;
+  removeFromMemorized: (clipId: string) => void;
+  memorizedClips: MemorizedClip[];
 }
 
-const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip, getPreviousClip, getCurrentClip, getInitialClip, onClear, onAddMore }) => {
+const VideoFeed: React.FC<VideoFeedProps> = ({ 
+  videoRanges, 
+  getNextClip, 
+  getPreviousClip, 
+  getInitialClip, 
+  onClear, 
+  addToMemorized
+}) => {
   const [currentVideo, setCurrentVideo] = useState<VideoFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -164,10 +174,11 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip,
             
             <button 
               className="control-btn"
-              onClick={onAddMore}
-              title="Add more videos"
+              onClick={() => addToMemorized(currentVideo)}
+              title="Memorize this clip"
+              disabled={!currentVideo?.isClip}
             >
-              ➕
+              🧠
             </button>
             
             <button 

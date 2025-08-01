@@ -39,7 +39,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
         
         // Set the start time after a small delay to ensure video is ready
         setTimeout(() => {
-          if (videoElement.currentTime !== video.startTime) {
+          if (video.startTime !== undefined && videoElement.currentTime !== video.startTime) {
             videoElement.currentTime = video.startTime;
           }
         }, 100);

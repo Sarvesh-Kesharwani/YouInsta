@@ -16,6 +16,10 @@ A modern web application that allows you to upload a folder of videos and scroll
 - 📊 **Progress Bar**: Visual progress indicator for each video
 - 🎨 **Modern UI**: Beautiful, responsive design with smooth animations
 - 📱 **Mobile Friendly**: Optimized for both desktop and mobile devices
+- 🧠 **Memorized Clips**: Save and manage favorite video clips
+- 📂 **Organized Content**: Support for "relax" and "study" folder structures
+- 💾 **File-based Storage**: Export/import memorized clips as JSON files
+- 🔄 **Combined Upload**: Load videos and memorized clips with a single button
 
 ## Supported Video Formats
 
@@ -69,10 +73,32 @@ npm run preview
 
 ## How to Use
 
+### Basic Video Upload
+
 1. **Upload Videos**: 
    - Drag and drop a folder of videos onto the upload area
    - Or click "Choose Video Files" to select videos manually
    - You can select multiple video files at once
+
+### Advanced Content Management
+
+2. **Organized Directory Structure**:
+   - Create a parent directory with two subfolders: "relax" and "study"
+   - Place your videos in the appropriate folders
+   - Use the "📁 Upload" button to load both folders at once
+   - The app will automatically detect and load videos from both folders
+
+3. **Memorized Clips Feature**:
+   - While watching videos, click the "🧠" button to memorize the current clip
+   - Memorized clips are excluded from random selection
+   - View and manage memorized clips in the home screen
+   - Save/load memorized clips to/from JSON files for persistence
+
+4. **File-based Storage**:
+   - Use "💾 Save to File" to export memorized clips as `memorized_clips.json`
+   - Place this file in your directory root for automatic loading with "📁 Upload"
+   - Use "📂 Load from File" to manually load memorized clips
+   - Use "📝 Create Sample File" to generate a template JSON file
 
 2. **Navigate Videos**:
    - **Mouse Wheel**: Scroll up/down to navigate between videos
