@@ -1,7 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useDropzone } from 'react-dropzone';
 import VideoFeed from './components/VideoFeed';
-import UploadArea from './components/UploadArea';
+import Sidebar from './components/Sidebar';
+import HomePage from './components/HomePage';
+import UploadPage from './components/UploadPage';
+import ConfigPage from './components/ConfigPage';
+import ClipsPage from './components/ClipsPage';
 import './App.css';
 
 // Type declarations for File System Access API
@@ -73,6 +76,7 @@ export interface CoinData {
 }
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('home');
   const [relaxVideos, setRelaxVideos] = useState<VideoFile[]>([]);
   const [studyVideos, setStudyVideos] = useState<VideoFile[]>([]);
   const [videoRanges, setVideoRanges] = useState<VideoWithRanges[]>([]);
@@ -142,6 +146,45 @@ function App() {
     return { min: 1, max: 5 }; // Default 1-5 minutes
   });
 
+  // Drop handlers
+  const onDropRelax = useCallback((acceptedFiles: File[]) => {
+    setIsUploading(true);
+    
+    const videoFiles = acceptedFiles.filter(file => 
+      file.type.startsWith('video/')
+    );
+
+    const newVideos: VideoFile[] = videoFiles.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name
+    }));
+
+    setRelaxVideos(prev => [...prev, ...newVideos]);
+    setIsUploading(false);
+  }, []);
+
+  const onDropStudy = useCallback((acceptedFiles: File[]) => {
+    setIsUploading(true);
+    
+    const videoFiles = acceptedFiles.filter(file => 
+      file.type.startsWith('video/')
+    );
+
+    const newVideos: VideoFile[] = videoFiles.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name
+    }));
+
+    setStudyVideos(prev => [...prev, ...newVideos]);
+    setIsUploading(false);
+  }, []);
+
+
+
   // Video probability settings
   const [studyVideoProbability, setStudyVideoProbability] = useState(() => {
     try {
@@ -176,6 +219,8 @@ function App() {
 
   // Ref to track clips currently being processed to prevent duplicate entries
   const processingClipRef = useRef<Set<string>>(new Set());
+
+
 
   // Always load config.json and update config parameters on app start
   useEffect(() => {
@@ -244,6 +289,7 @@ function App() {
   // Update clips in localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('youinsta_clips', JSON.stringify(clips));
+    console.log(`💾 Saved ${clips.length} clips to localStorage`);
     
     // Also save to JSON file if we have a file handle
     if (clipsFileHandle && clips.length > 0) {
@@ -252,14 +298,16 @@ function App() {
           const writable = await clipsFileHandle.createWritable();
           await writable.write(JSON.stringify(clips, null, 2));
           await writable.close();
-          console.log('Automatically saved clips to JSON file');
+          console.log('✅ Automatically saved clips to JSON file');
         } catch (error) {
-          console.error('Error auto-saving clips to file:', error);
+          console.error('❌ Error auto-saving clips to file:', error);
           // Clear the file handle if there's an error
           setClipsFileHandle(null);
         }
       };
       saveToFile();
+    } else if (clips.length > 0) {
+      console.log('⚠️ No clips.json file handle available - clips saved to localStorage only. Use "Save to File" button to enable automatic file saving.');
     }
   }, [clips, clipsFileHandle]);
 
@@ -301,6 +349,14 @@ function App() {
     // Also try to update the config.json file in the public directory
     updateConfigFile(config);
   }, [clipDurationMinutes, isRandomClipDurationEnabled, randomClipDurationRange, studyVideoProbability, relaxVideoProbability]);
+
+  // Auto-recalculate time ranges when clip duration settings change (if app is already started)
+  useEffect(() => {
+    if (isAppStarted && videoRanges.length > 0) {
+      console.log('🔄 Clip duration settings changed, recalculating time ranges...');
+      recalculateTimeRanges();
+    }
+  }, [clipDurationMinutes, isRandomClipDurationEnabled, randomClipDurationRange]);
 
 
 
@@ -692,7 +748,21 @@ function App() {
             setClipsFileHandle(newClipsFileHandle);
             console.log('Created new clips.json file for automatic saves');
           } else {
-            console.log('No combined directory available, clips will be saved to localStorage only');
+            // Try to create clips.json in the first available directory
+            const firstRelaxDir = relaxDirectories.find(dir => dir.handle);
+            const firstStudyDir = studyDirectories.find(dir => dir.handle);
+            const targetDir = firstRelaxDir || firstStudyDir;
+            
+            if (targetDir?.handle) {
+              const newClipsFileHandle = await targetDir.handle.getFileHandle('clips.json', { create: true });
+              const writable = await newClipsFileHandle.createWritable();
+              await writable.write(JSON.stringify([], null, 2));
+              await writable.close();
+              setClipsFileHandle(newClipsFileHandle);
+              console.log('Created new clips.json file in directory for automatic saves');
+            } else {
+              console.log('No directory available, clips will be saved to localStorage only. Use "Save to File" button to create clips.json manually.');
+            }
           }
         } catch (error) {
           console.log('Could not create clips.json file, clips will be saved to localStorage only:', error);
@@ -1724,57 +1794,7 @@ function App() {
     return initialQueue[3]; // Return middle clip
   };
 
-  const onDropRelax = useCallback((acceptedFiles: File[]) => {
-    setIsUploading(true);
-    
-    const videoFiles = acceptedFiles.filter(file => 
-      file.type.startsWith('video/')
-    );
 
-    const newVideos: VideoFile[] = videoFiles.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      url: URL.createObjectURL(file),
-      name: file.name
-    }));
-
-    setRelaxVideos(prev => [...prev, ...newVideos]);
-    setIsUploading(false);
-  }, []);
-
-  const onDropStudy = useCallback((acceptedFiles: File[]) => {
-    setIsUploading(true);
-    
-    const videoFiles = acceptedFiles.filter(file => 
-      file.type.startsWith('video/')
-    );
-
-    const newVideos: VideoFile[] = videoFiles.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      url: URL.createObjectURL(file),
-      name: file.name
-    }));
-
-    setStudyVideos(prev => [...prev, ...newVideos]);
-    setIsUploading(false);
-  }, []);
-
-  const { getRootProps: getRelaxRootProps, getInputProps: getRelaxInputProps, isDragActive: isRelaxDragActive } = useDropzone({
-    onDrop: onDropRelax,
-    accept: {
-      'video/*': ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v']
-    },
-    multiple: true
-  });
-
-  const { getRootProps: getStudyRootProps, getInputProps: getStudyInputProps, isDragActive: isStudyDragActive } = useDropzone({
-    onDrop: onDropStudy,
-    accept: {
-      'video/*': ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v']
-    },
-    multiple: true
-  });
 
   const clearVideos = () => {
     // Revoke object URLs to free memory
@@ -2010,18 +2030,31 @@ function App() {
     return clip;
   };
 
-  // Function to start the app
-  const startApp = async () => {
+  // Function to recalculate time ranges with current settings
+  const recalculateTimeRanges = async () => {
     if (relaxVideos.length === 0 && studyVideos.length === 0) {
-      console.log('Please upload at least one video to start the app');
+      console.log('No videos available to recalculate time ranges');
       return;
     }
     
-    // Calculate time ranges for all videos
+    console.log('🔄 Recalculating time ranges with current clip duration settings...');
+    console.log('Current settings:', {
+      clipDurationMinutes,
+      isRandomClipDurationEnabled,
+      randomClipDurationRange
+    });
+    
+    // Calculate time ranges for all videos with current settings
     const newVideoRanges = await calculateTimeRanges(relaxVideos, studyVideos);
     setVideoRanges(newVideoRanges);
-    setIsAppStarted(true);
+    
+    // Clear the clip queue since the ranges have changed
+    setClipQueue({ clips: [], currentIndex: 0, lastUsed: 0, preloadedVideos: new Set() });
+    
+    console.log('✅ Time ranges recalculated successfully');
   };
+
+
 
   // Memory cleanup effect
   useEffect(() => {
@@ -2041,468 +2074,7 @@ function App() {
 
   return (
     <div className="app">
-      {!isAppStarted ? (
-        <div className="home-screen">
-          {/* Coin Display */}
-          <div className="home-coin-display">
-            <div className="coin-info">
-              <div className="coin-count">
-                🪙 {coinData.totalCoins} Coins
-              </div>
-              <div className="coin-earned-today">
-                Today: +{coinData.earnedToday}
-              </div>
-            </div>
-            <div className="coin-history">
-              {coinData.history.slice(-3).map((entry, index) => (
-                <div key={index} className="history-entry">
-                  {entry.date}: +{entry.coins}
-                </div>
-              ))}
-            </div>
-            
-            {/* Coin Management Buttons */}
-            <div className="coin-file-buttons">
-              <button 
-                className="load-coin-btn"
-                onClick={loadCoinDataFromFile}
-                title="Load coin data from file"
-              >
-                🪙 Load Coins
-              </button>
-              <button 
-                className="save-coin-btn"
-                onClick={saveCoinDataToFile}
-                title="Save coin data to file"
-              >
-                💾 Save Coins
-              </button>
-              <button 
-                className="create-coin-sample-btn"
-                onClick={createSampleCoinDataFile}
-                title="Create a sample coins_earned.json file"
-              >
-                📝 Create Coin Sample
-              </button>
-            </div>
-          </div>
-
-          {/* Combined Directory Section */}
-          {combinedDirectory && (relaxVideos.length > 0 || studyVideos.length > 0) && (
-            <div className="combined-directory-section">
-              <h2>📁 Combined Directory</h2>
-              <div className="directory-info">
-                <span className="directory-name">{combinedDirectory.name}</span>
-                <button 
-                  className="remove-directory-btn"
-                  onClick={removeCombinedDirectory}
-                  title="Remove combined directory"
-                >
-                  ❌
-                </button>
-              </div>
-              <div className="video-count">
-                {relaxVideos.length} relax video(s) + {studyVideos.length} study video(s)
-              </div>
-            </div>
-          )}
-
-          <div className="content-management-section">
-            <h2>📂 Content Management</h2>
-            
-            <div className="sections-container">
-              <div className="section relax-section">
-                <h2>🎬 Relax</h2>
-                
-                {/* Directory Management */}
-                <div className="directory-section">
-                  <h3>📁 Selected Directories</h3>
-                  {relaxDirectories.length > 0 ? (
-                    <div className="directory-list">
-                      {relaxDirectories.map((dir, index) => (
-                        <div key={index} className="directory-item">
-                          <span className="directory-name">{dir.name}</span>
-                          <button 
-                            className="remove-directory-btn"
-                            onClick={() => removeDirectory(dir.path, 'relax')}
-                            title="Remove directory"
-                          >
-                            ❌
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="no-directories">No directories selected</p>
-                  )}
-                  
-                  <button 
-                    className="select-directory-btn"
-                    onClick={() => selectDirectory('relax')}
-                    disabled={isLoadingDirectories}
-                  >
-                    📁 Select Directory
-                  </button>
-                </div>
-                
-                <UploadArea 
-                  getRootProps={getRelaxRootProps}
-                  getInputProps={getRelaxInputProps}
-                  isDragActive={isRelaxDragActive}
-                  isUploading={isUploading}
-                  compact={true}
-                />
-                <div className="video-count">
-                  {relaxVideos.length} video(s) from {relaxDirectories.length} directory(ies)
-                </div>
-              </div>
-              
-              <div className="section study-section">
-                <h2>📚 Study</h2>
-                
-                {/* Directory Management */}
-                <div className="directory-section">
-                  <h3>📁 Selected Directories</h3>
-                  {studyDirectories.length > 0 ? (
-                    <div className="directory-list">
-                      {studyDirectories.map((dir, index) => (
-                        <div key={index} className="directory-item">
-                          <span className="directory-name">{dir.name}</span>
-                          <button 
-                            className="remove-directory-btn"
-                            onClick={() => removeDirectory(dir.path, 'study')}
-                            title="Remove directory"
-                          >
-                            ❌
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="no-directories">No directories selected</p>
-                  )}
-                  
-                  <button 
-                    className="select-directory-btn"
-                    onClick={() => selectDirectory('study')}
-                    disabled={isLoadingDirectories}
-                  >
-                    📁 Select Directory
-                  </button>
-                </div>
-                
-                <UploadArea 
-                  getRootProps={getStudyRootProps}
-                  getInputProps={getStudyInputProps}
-                  isDragActive={isStudyDragActive}
-                  isUploading={isUploading}
-                  compact={true}
-                />
-                <div className="video-count">
-                  {studyVideos.length} video(s) from {studyDirectories.length} directory(ies)
-                </div>
-              </div>
-            </div>
-            
-            {/* Clip Duration Setting */}
-            <div className="clip-duration-container">
-              <div className="config-status">
-                {configLoaded ? (
-                  <span className="config-loaded">
-                    {configSource === 'localStorage' && '✅ Config loaded from user preferences (localStorage)'}
-                    {configSource === 'config.json' && '✅ Config loaded from default config.json'}
-                    {configSource === 'defaults' && '✅ Config loaded from default values'}
-                  </span>
-                ) : (
-                  <span className="config-loading">🔄 Loading configuration...</span>
-                )}
-              </div>
-              <label htmlFor="clip-duration-input" className="clip-duration-label">
-                ⏱️ Clip Duration (minutes):
-              </label>
-              <div className="clip-duration-input-group">
-                <input
-                  id="clip-duration-input"
-                  type="number"
-                  min="1"
-                  max="60"
-                  value={clipDurationMinutes}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (value >= 1 && value <= 60) {
-                      setClipDurationMinutes(value);
-                    }
-                  }}
-                  className="clip-duration-input"
-                  title="Set the duration for each video clip in minutes (1-60)"
-                  disabled={isRandomClipDurationEnabled}
-                />
-                <span className="clip-duration-unit">minutes</span>
-              </div>
-              <button 
-                className="download-config-btn"
-                onClick={saveConfigFile}
-                title="Save current configuration to config.json"
-              >
-                � Save Config
-              </button>
-            </div>
-            
-            {/* Random Clip Duration Setting */}
-            <div className="random-clip-duration-container">
-              <div className="random-clip-toggle">
-                <label className="random-clip-label">
-                  <input
-                    type="checkbox"
-                    checked={isRandomClipDurationEnabled}
-                    onChange={(e) => setIsRandomClipDurationEnabled(e.target.checked)}
-                    className="random-clip-checkbox"
-                  />
-                  <span className="random-clip-text">🎲 Random Clip Duration</span>
-                </label>
-              </div>
-              
-              {isRandomClipDurationEnabled && (
-                <div className="random-clip-range">
-                  <label className="range-label">
-                    Range: {randomClipDurationRange.min} - {randomClipDurationRange.max} minutes
-                  </label>
-                  <div className="range-inputs">
-                    <div className="range-input-group">
-                      <label htmlFor="min-range">Min:</label>
-                      <input
-                        id="min-range"
-                        type="number"
-                        min="1"
-                        max={randomClipDurationRange.max}
-                        value={randomClipDurationRange.min}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (value >= 1 && value <= randomClipDurationRange.max) {
-                            setRandomClipDurationRange((prev: { min: number; max: number }) => ({ ...prev, min: value }));
-                          }
-                        }}
-                        className="range-input"
-                      />
-                    </div>
-                    <div className="range-input-group">
-                      <label htmlFor="max-range">Max:</label>
-                      <input
-                        id="max-range"
-                        type="number"
-                        min={randomClipDurationRange.min}
-                        max="10"
-                        value={randomClipDurationRange.max}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (value >= randomClipDurationRange.min && value <= 10) {
-                            setRandomClipDurationRange((prev: { min: number; max: number }) => ({ ...prev, max: value }));
-                          }
-                        }}
-                        className="range-input"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Video Probability Settings */}
-            <div className="video-probability-container">
-              <h3>🎯 Video Probability Settings</h3>
-              <p className="probability-description">
-                Control the probability of study vs relax videos appearing in the scrolling list
-              </p>
-              
-              <div className="probability-inputs">
-                <div className="probability-input-group">
-                  <label htmlFor="study-probability" className="probability-label">
-                    📚 Study Videos: {studyVideoProbability}%
-                  </label>
-                  <input
-                    id="study-probability"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={studyVideoProbability}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      setStudyVideoProbability(value);
-                      // Automatically adjust relax probability to maintain 100% total
-                      setRelaxVideoProbability(100 - value);
-                    }}
-                    className="probability-slider"
-                    title="Adjust the probability of study videos appearing"
-                  />
-                </div>
-                
-                <div className="probability-input-group">
-                  <label htmlFor="relax-probability" className="probability-label">
-                    🎬 Relax Videos: {relaxVideoProbability}%
-                  </label>
-                  <input
-                    id="relax-probability"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={relaxVideoProbability}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      setRelaxVideoProbability(value);
-                      // Automatically adjust study probability to maintain 100% total
-                      setStudyVideoProbability(100 - value);
-                    }}
-                    className="probability-slider"
-                    title="Adjust the probability of relax videos appearing"
-                  />
-                </div>
-              </div>
-              
-              <div className="probability-summary">
-                <span className="total-probability">
-                  Total: {studyVideoProbability + relaxVideoProbability}%
-                  {studyVideoProbability + relaxVideoProbability !== 100 && (
-                    <span className="warning"> ⚠️ Total should be 100%</span>
-                  )}
-                </span>
-              </div>
-            </div>
-            
-            {/* Combined Directory Button */}
-            {!combinedDirectory && (
-              <div className="combined-directory-button-container">
-                <button 
-                  className="select-combined-directory-btn"
-                  onClick={selectCombinedDirectory}
-                  disabled={isLoadingDirectories}
-                >
-                  📁 Upload
-                </button>
-              </div>
-            )}
-
-            {/* Clear All Directories Button */}
-            <div className="clear-directories-container">
-              <button 
-                className="clear-all-btn"
-                onClick={clearDirectories}
-                disabled={(relaxDirectories.length === 0 && studyDirectories.length === 0) && !combinedDirectory}
-              >
-                🗑️ Clear All Directories
-              </button>
-            </div>
-          </div>
-          
-          {/* Clips Section */}
-          <div className="clips-section">
-            <h2>📋 All Clips</h2>
-            
-            {/* File Management Buttons */}
-            <div className="clips-file-buttons">
-              <button 
-                className="load-clips-btn"
-                onClick={loadClipsFromFile}
-                title="Load clips from file"
-              >
-                📂 Load from File
-              </button>
-              <button 
-                className="save-clips-btn"
-                onClick={saveClipsToFile}
-                title="Save clips to file"
-              >
-                💾 Save to File
-              </button>
-              <button 
-                className="create-sample-btn"
-                onClick={createSampleClipsFile}
-                title="Create a sample clips.json file"
-              >
-                📝 Create Sample File
-              </button>
-            </div>
-            
-            {clips.length > 0 ? (
-              <div className="clips-list">
-                {clips.map((clip) => (
-                  <div key={clip.id} className="clip-item">
-                    <div className="clip-info">
-                      <span className="clip-name">{clip.videoName}</span>
-                      <span className="clip-time">
-                        {Math.floor(clip.startTime / 60)}:{(clip.startTime % 60).toString().padStart(2, '0')} - 
-                        {Math.floor(clip.endTime / 60)}:{(clip.endTime % 60).toString().padStart(2, '0')}
-                      </span>
-                      <span className="clip-category">{clip.category}</span>
-                      <span className="clip-status">
-                        {clip.memorized ? '🧠 Memorized' : '❌ Not Memorized'} | 
-                        {clip.watched ? ` 👁️ Watched (${clip.watchPercentage}%)` : ' 👁️ Not Watched'} |
-                        {clip.quizStatus === 'passed' ? ' ✅ Quiz Passed' : 
-                         clip.quizStatus === 'failed' ? ' ❌ Quiz Failed' : ' ❓ Quiz Not Answered'}
-                        {clip.lastWatchedAt && ` | Last: ${new Date(clip.lastWatchedAt).toLocaleTimeString()}`}
-                      </span>
-                    </div>
-                    <button 
-                      className="remove-clip-btn"
-                      onClick={() => removeClip(clip.id)}
-                      title="Remove clip"
-                    >
-                      ❌
-                    </button>
-                  </div>
-                ))}
-                <button 
-                  className="clear-clips-btn"
-                  onClick={clearClips}
-                >
-                  🗑️ Clear All Clips
-                </button>
-              </div>
-            ) : (
-              <p className="no-clips">No clips yet. Start the app and clips will be added as you watch them!</p>
-            )}
-
-            {/* Current Memory Clips Section */}
-            {isAppStarted && (
-              <div className="current-memory-clips">
-                <h3>🧠 Current 7 Clips in Memory</h3>
-                {getCurrentMemoryClips().length > 0 ? (
-                  <div className="memory-clips-list">
-                    {getCurrentMemoryClips().map((clip, index) => (
-                      <div key={`memory-${clip.id}`} className="memory-clip-item">
-                        <div className="memory-clip-info">
-                          <span className="memory-clip-index">#{index + 1}</span>
-                          <span className="memory-clip-name">{clip.videoName}</span>
-                          <span className="memory-clip-time">
-                            {Math.floor(clip.startTime / 60)}:{(clip.startTime % 60).toString().padStart(2, '0')} - 
-                            {Math.floor(clip.endTime / 60)}:{(clip.endTime % 60).toString().padStart(2, '0')}
-                          </span>
-                          <span className="memory-clip-status">
-                            {clip.watchPercentage}% watched | 
-                            {clip.quizStatus === 'passed' ? ' ✅ Passed' : 
-                             clip.quizStatus === 'failed' ? ' ❌ Failed' : ' ❓ Not Answered'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-memory-clips">No clips currently in memory. Start scrolling to load clips!</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="start-button-container">
-            <button 
-              className="start-button"
-              onClick={startApp}
-              disabled={relaxVideos.length === 0 && studyVideos.length === 0}
-            >
-              🚀 Start Scrolling Experience
-            </button>
-          </div>
-        </div>
-      ) : (
+      {currentPage === 'video-feed' ? (
         <VideoFeed 
           videos={[...relaxVideos, ...studyVideos]}
           videoRanges={videoRanges}
@@ -2512,8 +2084,7 @@ function App() {
           getInitialClip={getInitialClip}
           onClear={clearVideos}
           onAddMore={() => {
-            // Go back to home screen to add more videos
-            setIsAppStarted(false);
+            setCurrentPage('upload');
           }}
           markAsMemorized={markAsMemorized}
           clips={clips}
@@ -2525,6 +2096,75 @@ function App() {
           onVideoChange={clearProcessedClipsFor80Percent}
           processedClipsFor80Percent={processedClipsFor80Percent}
         />
+      ) : (
+        <>
+          <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+          <div className="main-content">
+            {currentPage === 'home' && (
+              <HomePage
+                coinData={coinData}
+                onLoadCoinDataFromFile={loadCoinDataFromFile}
+                onSaveCoinDataToFile={saveCoinDataToFile}
+                onCreateSampleCoinDataFile={createSampleCoinDataFile}
+                onStartApp={() => setCurrentPage('video-feed')}
+                canStartApp={relaxVideos.length > 0 || studyVideos.length > 0}
+              />
+            )}
+            
+            {currentPage === 'upload' && (
+              <UploadPage
+                relaxVideos={relaxVideos}
+                studyVideos={studyVideos}
+                relaxDirectories={relaxDirectories}
+                studyDirectories={studyDirectories}
+                combinedDirectory={combinedDirectory}
+                isLoadingDirectories={isLoadingDirectories}
+                isUploading={isUploading}
+                onDropRelax={onDropRelax}
+                onDropStudy={onDropStudy}
+                onSelectDirectory={selectDirectory}
+                onSelectCombinedDirectory={selectCombinedDirectory}
+                onRemoveDirectory={removeDirectory}
+                onRemoveCombinedDirectory={removeCombinedDirectory}
+                onClearDirectories={clearDirectories}
+              />
+            )}
+            
+            {currentPage === 'config' && (
+              <ConfigPage
+                clipDurationMinutes={clipDurationMinutes}
+                setClipDurationMinutes={setClipDurationMinutes}
+                isRandomClipDurationEnabled={isRandomClipDurationEnabled}
+                setIsRandomClipDurationEnabled={setIsRandomClipDurationEnabled}
+                randomClipDurationRange={randomClipDurationRange}
+                setRandomClipDurationRange={setRandomClipDurationRange}
+                studyVideoProbability={studyVideoProbability}
+                setStudyVideoProbability={setStudyVideoProbability}
+                relaxVideoProbability={relaxVideoProbability}
+                setRelaxVideoProbability={setRelaxVideoProbability}
+                configLoaded={configLoaded}
+                configSource={configSource}
+                onSaveConfigFile={saveConfigFile}
+                onRecalculateTimeRanges={recalculateTimeRanges}
+                isAppStarted={isAppStarted}
+              />
+            )}
+            
+            {currentPage === 'clips' && (
+              <ClipsPage
+                clips={clips}
+                clipsFileHandle={clipsFileHandle}
+                onLoadClipsFromFile={loadClipsFromFile}
+                onSaveClipsToFile={saveClipsToFile}
+                onCreateSampleClipsFile={createSampleClipsFile}
+                onRemoveClip={removeClip}
+                onClearClips={clearClips}
+                getCurrentMemoryClips={getCurrentMemoryClips}
+                isAppStarted={isAppStarted}
+              />
+            )}
+          </div>
+        </>
       )}
     </div>
   );

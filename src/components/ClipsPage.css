@@ -1,0 +1,622 @@
+.clips-page {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.clips-header {
+  text-align: center;
+  margin-bottom: 40px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 40px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.clips-header h1 {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.clips-header p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.2rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.clips-content {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(10px);
+}
+
+/* File Status */
+.clips-file-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-indicator {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.status-indicator.enabled {
+  color: #4caf50;
+}
+
+.status-indicator.disabled {
+  color: #ff9800;
+}
+
+.status-note {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  font-style: italic;
+}
+
+/* File Buttons */
+.clips-file-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.load-clips-btn,
+.save-clips-btn,
+.create-sample-btn {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+.load-clips-btn:hover,
+.save-clips-btn:hover,
+.create-sample-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+  background: linear-gradient(135deg, #1976d2, #1565c0);
+}
+
+/* Clips Section */
+.clips-section {
+  margin-bottom: 30px;
+}
+
+.clips-section h2 {
+  color: white;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.clips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clip-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+}
+
+.clip-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.clip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.clip-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip-time {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: monospace;
+}
+
+.clip-category {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: capitalize;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.clip-status {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.remove-clip-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  margin-left: 10px;
+}
+
+.remove-clip-btn:hover {
+  background: rgba(255, 107, 107, 0.2);
+  transform: scale(1.1);
+}
+
+.clear-clips-btn {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+  width: 100%;
+  box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+.clear-clips-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+  background: linear-gradient(135deg, #d32f2f, #c62828);
+}
+
+.no-clips {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+  margin: 20px 0;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+/* Current Memory Clips Section */
+.current-memory-clips {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.current-memory-clips h3 {
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.memory-clips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memory-clip-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.memory-clip-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.memory-clip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.memory-clip-index {
+  font-size: 12px;
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.memory-clip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-clip-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.memory-clip-status {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.no-memory-clips {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin: 10px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+/* Statistics Section */
+.clips-statistics {
+  margin-top: 30px;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.clips-statistics h3 {
+  color: white;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #4ade80;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .clips-page {
+    padding: 20px;
+  }
+
+  .clips-header {
+    padding: 30px 20px;
+    margin-bottom: 30px;
+  }
+
+  .clips-header h1 {
+    font-size: 2rem;
+  }
+
+  .clips-header p {
+    font-size: 1rem;
+  }
+
+  .clips-content {
+    padding: 20px;
+  }
+
+  .clips-file-status {
+    padding: 8px;
+  }
+
+  .status-indicator {
+    font-size: 13px;
+  }
+
+  .status-note {
+    font-size: 11px;
+  }
+
+  .clips-section h2 {
+    font-size: 1.2rem;
+  }
+
+  .clips-file-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .load-clips-btn,
+  .save-clips-btn,
+  .create-sample-btn {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .clip-item {
+    padding: 10px 12px;
+  }
+
+  .clip-name {
+    font-size: 13px;
+  }
+
+  .clip-time {
+    font-size: 11px;
+  }
+
+  .clip-category {
+    font-size: 11px;
+  }
+
+  .clip-status {
+    font-size: 10px;
+  }
+
+  .clear-clips-btn {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+
+  .current-memory-clips {
+    padding: 15px;
+    margin-top: 15px;
+  }
+
+  .current-memory-clips h3 {
+    font-size: 1.1rem;
+  }
+
+  .memory-clip-item {
+    padding: 8px 10px;
+  }
+
+  .memory-clip-name {
+    font-size: 12px;
+  }
+
+  .memory-clip-time {
+    font-size: 10px;
+  }
+
+  .memory-clip-status {
+    font-size: 9px;
+  }
+
+  .clips-statistics {
+    padding: 20px;
+    margin-top: 25px;
+  }
+
+  .clips-statistics h3 {
+    font-size: 1.1rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 15px;
+  }
+
+  .stat-number {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .clips-page {
+    padding: 15px;
+  }
+
+  .clips-header {
+    padding: 25px 15px;
+    margin-bottom: 25px;
+  }
+
+  .clips-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .clips-header p {
+    font-size: 0.9rem;
+  }
+
+  .clips-content {
+    padding: 15px;
+  }
+
+  .clips-file-status {
+    padding: 6px;
+  }
+
+  .status-indicator {
+    font-size: 12px;
+  }
+
+  .status-note {
+    font-size: 10px;
+  }
+
+  .clips-section h2 {
+    font-size: 1.1rem;
+  }
+
+  .clips-file-buttons {
+    gap: 6px;
+  }
+
+  .load-clips-btn,
+  .save-clips-btn,
+  .create-sample-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .clip-item {
+    padding: 8px 10px;
+  }
+
+  .clip-name {
+    font-size: 12px;
+  }
+
+  .clip-time {
+    font-size: 10px;
+  }
+
+  .clip-category {
+    font-size: 10px;
+  }
+
+  .clip-status {
+    font-size: 9px;
+  }
+
+  .clear-clips-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .current-memory-clips {
+    padding: 12px;
+    margin-top: 12px;
+  }
+
+  .current-memory-clips h3 {
+    font-size: 1rem;
+  }
+
+  .memory-clip-item {
+    padding: 6px 8px;
+  }
+
+  .memory-clip-name {
+    font-size: 11px;
+  }
+
+  .memory-clip-time {
+    font-size: 9px;
+  }
+
+  .memory-clip-status {
+    font-size: 8px;
+  }
+
+  .clips-statistics {
+    padding: 15px;
+    margin-top: 20px;
+  }
+
+  .clips-statistics h3 {
+    font-size: 1rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-number {
+    font-size: 1.3rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+} 
