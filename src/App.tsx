@@ -76,6 +76,15 @@ export interface CoinData {
   }[];
 }
 
+export interface WatchTimeData {
+  totalMinutes: number;
+  date: string;
+  history: {
+    date: string;
+    minutes: number;
+  }[];
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [relaxVideos, setRelaxVideos] = useState<VideoFile[]>([]);
@@ -93,6 +102,12 @@ function App() {
   const [coinData, setCoinData] = useState<CoinData>({
     totalCoins: 0,
     earnedToday: 0,
+    date: new Date().toDateString(),
+    history: []
+  });
+  
+  const [watchTimeData, setWatchTimeData] = useState<WatchTimeData>({
+    totalMinutes: 0,
     date: new Date().toDateString(),
     history: []
   });
@@ -217,6 +232,8 @@ function App() {
   const [configSource, setConfigSource] = useState<'localStorage' | 'config.json' | 'defaults' | null>(null);
   
   const [clipsFileHandle, setClipsFileHandle] = useState<any>(null);
+  const [coinsFileHandle, setCoinsFileHandle] = useState<any>(null);
+  const [watchTimeFileHandle, setWatchTimeFileHandle] = useState<any>(null);
 
   // Ref to track clips currently being processed to prevent duplicate entries
   const processingClipRef = useRef<Set<string>>(new Set());
@@ -317,7 +334,24 @@ function App() {
     const saveCoinData = async () => {
       try {
         await mongoDataService.saveCoinData(coinData);
-        console.log('💾 Coin data saved');
+        console.log('💾 Coin data saved to MongoDB');
+        
+        // Also save to JSON file if we have a file handle
+        if (coinsFileHandle && (coinData.totalCoins > 0 || coinData.history.length > 0)) {
+          const saveToFile = async () => {
+            try {
+              const writable = await coinsFileHandle.createWritable();
+              await writable.write(JSON.stringify(coinData, null, 2));
+              await writable.close();
+              console.log('✅ Automatically saved coin data to JSON file');
+            } catch (error) {
+              console.error('❌ Error auto-saving coin data to file:', error);
+              // Clear the file handle if there's an error
+              setCoinsFileHandle(null);
+            }
+          };
+          saveToFile();
+        }
       } catch (error) {
         console.error('Error saving coin data:', error);
       }
@@ -326,7 +360,7 @@ function App() {
     if (coinData.totalCoins > 0 || coinData.history.length > 0) {
       saveCoinData();
     }
-  }, [coinData.totalCoins, coinData.earnedToday, coinData.history.length]);
+  }, [coinData.totalCoins, coinData.earnedToday, coinData.history.length, coinsFileHandle]);
 
   // Update clips whenever they change
   useEffect(() => {
@@ -387,6 +421,36 @@ function App() {
       saveClips();
     }
   }, [clips, clipsFileHandle]); // Changed dependency to include full clips array
+
+  // Auto-save watch time data whenever it changes
+  useEffect(() => {
+    const saveWatchTimeData = async () => {
+      try {
+        // Save to JSON file if we have a file handle
+        if (watchTimeFileHandle && (watchTimeData.totalMinutes > 0 || watchTimeData.history.length > 0)) {
+          const saveToFile = async () => {
+            try {
+              const writable = await watchTimeFileHandle.createWritable();
+              await writable.write(JSON.stringify(watchTimeData, null, 2));
+              await writable.close();
+              console.log('✅ Automatically saved watch time data to JSON file');
+            } catch (error) {
+              console.error('❌ Error auto-saving watch time data to file:', error);
+              // Clear the file handle if there's an error
+              setWatchTimeFileHandle(null);
+            }
+          };
+          saveToFile();
+        }
+      } catch (error) {
+        console.error('Error saving watch time data:', error);
+      }
+    };
+    
+    if (watchTimeData.totalMinutes > 0 || watchTimeData.history.length > 0) {
+      saveWatchTimeData();
+    }
+  }, [watchTimeData.totalMinutes, watchTimeData.history.length, watchTimeFileHandle]);
 
 
   // Save directories whenever they change
@@ -568,6 +632,9 @@ function App() {
       await writable.write(JSON.stringify(coinData, null, 2));
       await writable.close();
 
+      // Store the file handle for future automatic saves
+      setCoinsFileHandle(fileHandle);
+
       console.log('Coin data saved to file successfully!');
     } catch (error) {
       console.error('Error saving coin data to file:', error);
@@ -590,7 +657,19 @@ function App() {
       const parsedData = JSON.parse(content);
 
       if (parsedData && typeof parsedData === 'object') {
+        // Clean duplicate entries before setting the data
+        if (parsedData.history && Array.isArray(parsedData.history)) {
+          const originalHistoryLength = parsedData.history.length;
+          parsedData.history = removeDuplicateCoinEntries(parsedData.history);
+          
+          if (originalHistoryLength !== parsedData.history.length) {
+            console.log(`🧹 Cleaned ${originalHistoryLength - parsedData.history.length} duplicate entries from loaded coin data`);
+          }
+        }
+        
         setCoinData(parsedData);
+        // Store the file handle for future automatic saves
+        setCoinsFileHandle(fileHandle);
         console.log('Coin data loaded from file successfully!');
       } else {
         console.warn('File does not contain valid coin data');
@@ -628,6 +707,98 @@ function App() {
       console.log('Sample coins_earned.json file created successfully!');
     } catch (error) {
       console.error('Error creating sample coin file:', error);
+    }
+  };
+
+  // Function to save watch time data to file
+  const saveWatchTimeDataToFile = async () => {
+    try {
+      const fileHandle = await window.showSaveFilePicker({
+        suggestedName: 'watch_time.json',
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(watchTimeData, null, 2));
+      await writable.close();
+
+      // Store the file handle for future automatic saves
+      setWatchTimeFileHandle(fileHandle);
+
+      console.log('Watch time data saved to file successfully!');
+    } catch (error) {
+      console.error('Error saving watch time data to file:', error);
+    }
+  };
+
+  // Function to load watch time data from file
+  const loadWatchTimeDataFromFile = async () => {
+    try {
+      const [fileHandle] = await window.showOpenFilePicker({
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }],
+        multiple: false
+      });
+
+      const file = await fileHandle.getFile();
+      const content = await file.text();
+      const parsedData = JSON.parse(content);
+
+      if (parsedData && typeof parsedData === 'object') {
+        // Clean duplicate entries before setting the data
+        if (parsedData.history && Array.isArray(parsedData.history)) {
+          const originalHistoryLength = parsedData.history.length;
+          parsedData.history = removeDuplicateWatchTimeEntries(parsedData.history);
+          
+          if (originalHistoryLength !== parsedData.history.length) {
+            console.log(`🧹 Cleaned ${originalHistoryLength - parsedData.history.length} duplicate entries from loaded watch time data`);
+          }
+        }
+        
+        setWatchTimeData(parsedData);
+        // Store the file handle for future automatic saves
+        setWatchTimeFileHandle(fileHandle);
+        console.log('Watch time data loaded from file successfully!');
+      } else {
+        console.warn('File does not contain valid watch time data');
+      }
+    } catch (error) {
+      console.error('Error loading watch time data from file:', error);
+    }
+  };
+
+  // Function to create sample watch time data file
+  const createSampleWatchTimeDataFile = async () => {
+    try {
+      const sampleData: WatchTimeData = {
+        totalMinutes: 45,
+        date: new Date().toDateString(),
+        history: [
+          { date: new Date().toDateString(), minutes: 15 },
+          { date: new Date(Date.now() - 86400000).toDateString(), minutes: 30 }
+        ]
+      };
+
+      const fileHandle = await window.showSaveFilePicker({
+        suggestedName: 'watch_time.json',
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(sampleData, null, 2));
+      await writable.close();
+
+      console.log('Sample watch_time.json file created successfully!');
+    } catch (error) {
+      console.error('Error creating sample watch time file:', error);
     }
   };
 
@@ -804,9 +975,6 @@ function App() {
         console.log('Could not find video with ranges for generated clip:', clip.id);
         continue;
       }
-
-      // Create a unique identifier for this clip
-      const clipIdentifier = `${videoWithRanges.video.name}_${clip.startTime}_${clip.endTime}`;
 
       // Check if this clip already exists in our clips array
       const existingClip = clips.find(c => 
@@ -1004,6 +1172,96 @@ function App() {
         }
       }
 
+      // If coinsFileHandle is null, try to create a new coins_earned.json file
+      if (!coinsFileHandle) {
+        console.log('No coins_earned.json file handle found, attempting to create one...');
+        try {
+          // Try to create coins_earned.json in the current directory if we have a combined directory
+          if (combinedDirectory?.handle) {
+            const newCoinsFileHandle = await combinedDirectory.handle.getFileHandle('coins_earned.json', { create: true });
+            const writable = await newCoinsFileHandle.createWritable();
+            const initialCoinData: CoinData = {
+              totalCoins: 0,
+              earnedToday: 0,
+              date: new Date().toDateString(),
+              history: []
+            };
+            await writable.write(JSON.stringify(initialCoinData, null, 2));
+            await writable.close();
+            setCoinsFileHandle(newCoinsFileHandle);
+            console.log('Created new coins_earned.json file for automatic saves');
+          } else {
+            // Try to create coins_earned.json in the first available directory
+            const firstRelaxDir = relaxDirectories.find(dir => dir.handle);
+            const firstStudyDir = studyDirectories.find(dir => dir.handle);
+            const targetDir = firstRelaxDir || firstStudyDir;
+            
+            if (targetDir?.handle) {
+              const newCoinsFileHandle = await targetDir.handle.getFileHandle('coins_earned.json', { create: true });
+              const writable = await newCoinsFileHandle.createWritable();
+              const initialCoinData: CoinData = {
+                totalCoins: 0,
+                earnedToday: 0,
+                date: new Date().toDateString(),
+                history: []
+              };
+              await writable.write(JSON.stringify(initialCoinData, null, 2));
+              await writable.close();
+              setCoinsFileHandle(newCoinsFileHandle);
+              console.log('Created new coins_earned.json file in directory for automatic saves');
+            } else {
+              console.log('No directory available, coins will be saved to localStorage only. Use "Save to File" button to create coins_earned.json manually.');
+            }
+          }
+        } catch (error) {
+          console.log('Could not create coins_earned.json file, coins will be saved to localStorage only:', error);
+        }
+      }
+
+      // If watchTimeFileHandle is null, try to create a new watch_time.json file
+      if (!watchTimeFileHandle) {
+        console.log('No watch_time.json file handle found, attempting to create one...');
+        try {
+          // Try to create watch_time.json in the current directory if we have a combined directory
+          if (combinedDirectory?.handle) {
+            const newWatchTimeFileHandle = await combinedDirectory.handle.getFileHandle('watch_time.json', { create: true });
+            const writable = await newWatchTimeFileHandle.createWritable();
+            const initialWatchTimeData: WatchTimeData = {
+              totalMinutes: 0,
+              date: new Date().toDateString(),
+              history: []
+            };
+            await writable.write(JSON.stringify(initialWatchTimeData, null, 2));
+            await writable.close();
+            setWatchTimeFileHandle(newWatchTimeFileHandle);
+            console.log('Created new watch_time.json file for automatic saves');
+          } else {
+            // Try to create watch_time.json in the first available directory
+            const firstRelaxDir = relaxDirectories.find(dir => dir.handle);
+            const firstStudyDir = studyDirectories.find(dir => dir.handle);
+            const targetDir = firstRelaxDir || firstStudyDir;
+            
+            if (targetDir?.handle) {
+              const newWatchTimeFileHandle = await targetDir.handle.getFileHandle('watch_time.json', { create: true });
+              const writable = await newWatchTimeFileHandle.createWritable();
+              const initialWatchTimeData: WatchTimeData = {
+                totalMinutes: 0,
+                date: new Date().toDateString(),
+                history: []
+              };
+              await writable.write(JSON.stringify(initialWatchTimeData, null, 2));
+              await writable.close();
+              setWatchTimeFileHandle(newWatchTimeFileHandle);
+              console.log('Created new watch_time.json file in directory for automatic saves');
+            } else {
+              console.log('No directory available, watch time will be saved to localStorage only. Use "Save to File" button to create watch_time.json manually.');
+            }
+          }
+        } catch (error) {
+          console.log('Could not create watch_time.json file, watch time will be saved to localStorage only:', error);
+        }
+      }
+
       // Get the current clips state to ensure we're working with the latest data
       const currentClips = [...clips];
       
@@ -1048,9 +1306,24 @@ function App() {
               : clip
           );
           setClips(updatedClips);
+          
+          // Calculate and update watch time data (only for study clips)
+          if (videoWithRanges.category === 'study') {
+            const clipDurationInSeconds = currentClip.endTime - currentClip.startTime;
+            const additionalWatchTimeInSeconds = (watchPercentage - existingClip.watchPercentage) * clipDurationInSeconds / 100;
+            const additionalWatchTimeInMinutes = additionalWatchTimeInSeconds / 60;
+            updateWatchTimeData(additionalWatchTimeInMinutes);
+          }
+          
           console.log(`✅ Updated existing clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) from ${existingClip.watchPercentage}% to ${watchPercentage}%`);
           console.log(`📊 Total clips count after update: ${updatedClips.length}`);
           console.log(`🎯 Clip will appear in 'All Clips' section: ${watchPercentage >= 80 ? 'YES' : 'NO'}`);
+          if (videoWithRanges.category === 'study') {
+            const clipDurationInSeconds = currentClip.endTime - currentClip.startTime;
+            const additionalWatchTimeInSeconds = (watchPercentage - existingClip.watchPercentage) * clipDurationInSeconds / 100;
+            const additionalWatchTimeInMinutes = additionalWatchTimeInSeconds / 60;
+            console.log(`⏱️ Added ${additionalWatchTimeInMinutes.toFixed(2)} minutes to watch time`);
+          }
         } else {
           console.log(`Clip already exists with higher or equal watch percentage: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}%, new: ${watchPercentage}%`);
         }
@@ -1075,9 +1348,24 @@ function App() {
 
         const updatedClips = [...currentClips, newClip];
         setClips(updatedClips);
+        
+        // Calculate and update watch time data for new clip (only for study clips)
+        if (videoWithRanges.category === 'study') {
+          const clipDurationInSeconds = currentClip.endTime - currentClip.startTime;
+          const watchTimeInSeconds = watchPercentage * clipDurationInSeconds / 100;
+          const watchTimeInMinutes = watchTimeInSeconds / 60;
+          updateWatchTimeData(watchTimeInMinutes);
+        }
+        
         console.log(`✅ Inserted new clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
         console.log(`📊 Total clips count after insertion: ${updatedClips.length}`);
         console.log(`🎯 Clip will appear in 'All Clips' section: ${watchPercentage >= 80 ? 'YES' : 'NO'}`);
+        if (videoWithRanges.category === 'study') {
+          const clipDurationInSeconds = currentClip.endTime - currentClip.startTime;
+          const watchTimeInSeconds = watchPercentage * clipDurationInSeconds / 100;
+          const watchTimeInMinutes = watchTimeInSeconds / 60;
+          console.log(`⏱️ Added ${watchTimeInMinutes.toFixed(2)} minutes to watch time`);
+        }
         
         // Debug the clips state after a short delay to ensure state has updated
         setTimeout(() => {
@@ -1302,22 +1590,25 @@ function App() {
     const today = new Date().toDateString();
     
     setCoinData(prev => {
-      const newHistory = [...prev.history];
+      // Clean any existing duplicates in the history
+      const cleanedHistory = removeDuplicateCoinEntries(prev.history);
       
       // Update today's entry or create new one
-      const todayIndex = newHistory.findIndex(entry => entry.date === today);
+      const todayIndex = cleanedHistory.findIndex(entry => entry.date === today);
       if (todayIndex >= 0) {
         // Create a new object instead of modifying the existing one
-        newHistory[todayIndex] = { ...newHistory[todayIndex], coins: newHistory[todayIndex].coins + amount };
+        cleanedHistory[todayIndex] = { ...cleanedHistory[todayIndex], coins: cleanedHistory[todayIndex].coins + amount };
+        console.log(`💰 Updated existing coin entry for ${today}: +${amount} coins (total: ${cleanedHistory[todayIndex].coins})`);
       } else {
-        newHistory.push({ date: today, coins: amount });
+        cleanedHistory.push({ date: today, coins: amount });
+        console.log(`💰 Created new coin entry for ${today}: ${amount} coins`);
       }
       
       return {
         totalCoins: prev.totalCoins + amount,
         earnedToday: prev.date === today ? prev.earnedToday + amount : amount,
         date: today,
-        history: newHistory
+        history: cleanedHistory
       };
     });
   };
@@ -1327,22 +1618,138 @@ function App() {
     const today = new Date().toDateString();
     
     setCoinData(prev => {
-      const newHistory = [...prev.history];
+      // Clean any existing duplicates in the history
+      const cleanedHistory = removeDuplicateCoinEntries(prev.history);
       
       // Update today's entry
-      const todayIndex = newHistory.findIndex(entry => entry.date === today);
+      const todayIndex = cleanedHistory.findIndex(entry => entry.date === today);
       if (todayIndex >= 0) {
         // Create a new object instead of modifying the existing one
-        newHistory[todayIndex] = { ...newHistory[todayIndex], coins: Math.max(0, newHistory[todayIndex].coins - amount) };
+        const newCoins = Math.max(0, cleanedHistory[todayIndex].coins - amount);
+        cleanedHistory[todayIndex] = { ...cleanedHistory[todayIndex], coins: newCoins };
+        console.log(`💸 Updated existing coin entry for ${today}: -${amount} coins (total: ${newCoins})`);
+      } else {
+        console.log(`💸 No existing coin entry found for ${today}, cannot remove coins`);
       }
       
       return {
         totalCoins: Math.max(0, prev.totalCoins - amount),
         earnedToday: prev.date === today ? Math.max(0, prev.earnedToday - amount) : 0,
         date: today,
-        history: newHistory
+        history: cleanedHistory
       };
     });
+  };
+
+  // Function to calculate daily watching progress
+  const calculateDailyWatchingProgress = () => {
+    const today = new Date().toDateString();
+    
+    // Calculate minutes watched today (only from study clips)
+    const minutesWatchedToday = clips.reduce((total, clip) => {
+      // Only count study clips that were watched today
+      if (clip.lastWatchedAt && clip.category === 'study') {
+        const clipDate = new Date(clip.lastWatchedAt).toDateString();
+        if (clipDate === today && clip.totalWatchTime) {
+          // Convert seconds to minutes (totalWatchTime is in seconds)
+          return total + (clip.totalWatchTime / 60);
+        }
+      }
+      return total;
+    }, 0);
+    
+    // Calculate total minutes available in study videos only
+    const totalMinutesAvailable = videoRanges.reduce((total, videoRange) => {
+      // Only count study videos
+      if (videoRange.category === 'study') {
+        return total + videoRange.timeRanges.reduce((videoTotal, timeRange) => {
+          const durationInSeconds = timeRange.endTime - timeRange.startTime;
+          return videoTotal + (durationInSeconds / 60); // Convert to minutes
+        }, 0);
+      }
+      return total;
+    }, 0);
+    
+    const progressPercentage = totalMinutesAvailable > 0 ? (minutesWatchedToday / totalMinutesAvailable) * 100 : 0;
+    
+    return {
+      minutesWatchedToday: Math.round(minutesWatchedToday * 100) / 100, // Round to 2 decimal places
+      totalMinutesAvailable: Math.round(totalMinutesAvailable * 100) / 100,
+      progressPercentage: Math.round(progressPercentage * 100) / 100
+    };
+  };
+
+  // Function to update watch time data when clips are watched
+  const updateWatchTimeData = (minutesWatched: number) => {
+    const today = new Date().toDateString();
+    
+    setWatchTimeData(prev => {
+      // Clean any existing duplicates in the history
+      const cleanedHistory = removeDuplicateWatchTimeEntries(prev.history);
+      
+      // Update today's entry or create new one
+      const todayIndex = cleanedHistory.findIndex(entry => entry.date === today);
+      if (todayIndex >= 0) {
+        // Create a new object instead of modifying the existing one
+        cleanedHistory[todayIndex] = { ...cleanedHistory[todayIndex], minutes: cleanedHistory[todayIndex].minutes + minutesWatched };
+        console.log(`⏱️ Updated existing watch time entry for ${today}: +${minutesWatched} minutes (total: ${cleanedHistory[todayIndex].minutes})`);
+      } else {
+        cleanedHistory.push({ date: today, minutes: minutesWatched });
+        console.log(`⏱️ Created new watch time entry for ${today}: ${minutesWatched} minutes`);
+      }
+      
+      return {
+        totalMinutes: prev.totalMinutes + minutesWatched,
+        date: today,
+        history: cleanedHistory
+      };
+    });
+  };
+
+  // Function to check for and remove duplicate entries in coin history
+  const removeDuplicateCoinEntries = (history: { date: string; coins: number }[]): { date: string; coins: number }[] => {
+    const seen = new Set<string>();
+    const cleanedHistory: { date: string; coins: number }[] = [];
+    
+    // Process entries in reverse order to keep the latest entry for each date
+    for (let i = history.length - 1; i >= 0; i--) {
+      const entry = history[i];
+      if (!seen.has(entry.date)) {
+        seen.add(entry.date);
+        cleanedHistory.unshift(entry); // Add to beginning to maintain order
+      } else {
+        console.log(`🔄 Removed duplicate coin entry for date: ${entry.date}`);
+      }
+    }
+    
+    if (cleanedHistory.length !== history.length) {
+      console.log(`🧹 Cleaned coin history: removed ${history.length - cleanedHistory.length} duplicate entries`);
+    }
+    
+    return cleanedHistory;
+  };
+
+  // Function to check for and remove duplicate entries in watch time history
+  const removeDuplicateWatchTimeEntries = (history: { date: string; minutes: number }[]): { date: string; minutes: number }[] => {
+    const seen = new Set<string>();
+    const cleanedHistory: { date: string; minutes: number }[] = [];
+    
+    // Process entries in reverse order to keep the latest entry for each date
+    for (let i = history.length - 1; i >= 0; i--) {
+      const entry = history[i];
+      if (!seen.has(entry.date)) {
+        seen.add(entry.date);
+        cleanedHistory.unshift(entry); // Add to beginning to maintain order
+      } else {
+        console.log(`🔄 Removed duplicate watch time entry for date: ${entry.date}`);
+      }
+    }
+    
+    if (cleanedHistory.length !== history.length) {
+      console.log(`🧹 Cleaned watch time history: removed ${history.length - cleanedHistory.length} duplicate entries`);
+    }
+    
+    return cleanedHistory;
   };
 
   // Function to check if a clip is already memorized
@@ -1679,8 +2086,20 @@ function App() {
                   const parsedCoinData = JSON.parse(content);
                   
                   if (parsedCoinData && typeof parsedCoinData === 'object') {
+                    // Clean duplicate entries before loading the data
+                    if (parsedCoinData.history && Array.isArray(parsedCoinData.history)) {
+                      const originalHistoryLength = parsedCoinData.history.length;
+                      parsedCoinData.history = removeDuplicateCoinEntries(parsedCoinData.history);
+                      
+                      if (originalHistoryLength !== parsedCoinData.history.length) {
+                        console.log(`🧹 Cleaned ${originalHistoryLength - parsedCoinData.history.length} duplicate entries from loaded coin data`);
+                      }
+                    }
+                    
                     loadedCoinData = parsedCoinData;
-                    console.log(`Successfully loaded coin data: ${parsedCoinData.totalCoins} total coins`);
+                    // Store the file handle for automatic saves
+                    setCoinsFileHandle(entry);
+                    console.log(`Successfully loaded coin data: ${parsedCoinData.totalCoins} total coins and set up automatic saving`);
                   }
                 } catch (error) {
                   console.warn('Could not parse coins_earned.json file:', error);
@@ -1733,7 +2152,34 @@ function App() {
           }
           
           if (loadedCoinData) {
+            // Clean duplicates one more time before setting the data
+            if (loadedCoinData.history && Array.isArray(loadedCoinData.history)) {
+              const originalHistoryLength = loadedCoinData.history.length;
+              loadedCoinData.history = removeDuplicateCoinEntries(loadedCoinData.history);
+              
+              if (originalHistoryLength !== loadedCoinData.history.length) {
+                console.log(`🧹 Final cleanup: removed ${originalHistoryLength - loadedCoinData.history.length} duplicate entries`);
+              }
+            }
+            
             setCoinData(loadedCoinData);
+            // Try to get the file handle for future automatic saves
+            try {
+              const coinsFileHandle = await dirHandle.getFileHandle('coins_earned.json');
+              setCoinsFileHandle(coinsFileHandle);
+              console.log('Stored coins_earned.json file handle for automatic saves');
+            } catch (error) {
+              console.log('Could not get file handle for coins_earned.json (will need manual save)');
+            }
+            
+            // Try to get the watch time file handle for future automatic saves
+            try {
+              const watchTimeFileHandle = await dirHandle.getFileHandle('watch_time.json');
+              setWatchTimeFileHandle(watchTimeFileHandle);
+              console.log('Stored watch_time.json file handle for automatic saves');
+            } catch (error) {
+              console.log('Could not get file handle for watch_time.json (will need manual save)');
+            }
           }
           
           console.log(`Successfully loaded combined directory: ${relaxVideos.length + studyVideos.length} videos, ${loadedMemorizedClips.length} clips, and coin data`);
@@ -1969,8 +2415,20 @@ function App() {
                 const parsedCoinData = JSON.parse(content);
                 
                 if (parsedCoinData && typeof parsedCoinData === 'object') {
+                  // Clean duplicate entries before loading the data
+                  if (parsedCoinData.history && Array.isArray(parsedCoinData.history)) {
+                    const originalHistoryLength = parsedCoinData.history.length;
+                    parsedCoinData.history = removeDuplicateCoinEntries(parsedCoinData.history);
+                    
+                    if (originalHistoryLength !== parsedCoinData.history.length) {
+                      console.log(`🧹 Cleaned ${originalHistoryLength - parsedCoinData.history.length} duplicate entries from loaded coin data`);
+                    }
+                  }
+                  
                   loadedCoinData = parsedCoinData;
-                  console.log(`Successfully loaded coin data: ${parsedCoinData.totalCoins} total coins`);
+                  // Store the file handle for automatic saves
+                  setCoinsFileHandle(entry);
+                  console.log(`Successfully loaded coin data: ${parsedCoinData.totalCoins} total coins and set up automatic saving`);
                 } else {
                   console.warn('coins_earned.json does not contain valid coin data');
                 }
@@ -2000,6 +2458,74 @@ function App() {
         
         if (!coinFileFound) {
           console.log('No coins_earned.json file found in the selected directory');
+          console.log('To create a coins_earned.json file, use the "💾 Save to File" button in the Coins section');
+          
+          // Try to create a new coins_earned.json file in the selected directory
+          try {
+            const newCoinsFileHandle = await dirHandle.getFileHandle('coins_earned.json', { create: true });
+            const writable = await newCoinsFileHandle.createWritable();
+            const initialCoinData: CoinData = {
+              totalCoins: 0,
+              earnedToday: 0,
+              date: new Date().toDateString(),
+              history: []
+            };
+            await writable.write(JSON.stringify(initialCoinData, null, 2));
+            await writable.close();
+            setCoinsFileHandle(newCoinsFileHandle);
+            console.log('Created new coins_earned.json file in the selected directory for automatic saves');
+          } catch (error) {
+            console.log('Could not create coins_earned.json file (will need manual save)');
+          }
+        }
+        
+        // Check for watch_time.json file
+        let watchTimeFileFound = false;
+        try {
+          const watchTimeFile = await dirHandle.getFileHandle('watch_time.json');
+          const watchTimeContent = await watchTimeFile.getFile();
+          const watchTimeText = await watchTimeContent.text();
+          const loadedWatchTimeData = JSON.parse(watchTimeText);
+          
+          if (loadedWatchTimeData && typeof loadedWatchTimeData === 'object') {
+            // Clean duplicates before setting the data
+            if (loadedWatchTimeData.history && Array.isArray(loadedWatchTimeData.history)) {
+              const originalHistoryLength = loadedWatchTimeData.history.length;
+              loadedWatchTimeData.history = removeDuplicateWatchTimeEntries(loadedWatchTimeData.history);
+              
+              if (originalHistoryLength !== loadedWatchTimeData.history.length) {
+                console.log(`🧹 Cleaned ${originalHistoryLength - loadedWatchTimeData.history.length} duplicate entries from loaded watch time data`);
+              }
+            }
+            
+            setWatchTimeData(loadedWatchTimeData);
+            watchTimeFileFound = true;
+            console.log(`Successfully loaded watch time data: ${loadedWatchTimeData.totalMinutes} total minutes`);
+          }
+        } catch (error) {
+          console.log('No watch_time.json file found in the selected directory');
+        }
+        
+        if (!watchTimeFileFound) {
+          console.log('No watch_time.json file found in the selected directory');
+          console.log('To create a watch_time.json file, use the "💾 Save to File" button in the Watch Time section');
+          
+          // Try to create a new watch_time.json file in the selected directory
+          try {
+            const newWatchTimeFileHandle = await dirHandle.getFileHandle('watch_time.json', { create: true });
+            const writable = await newWatchTimeFileHandle.createWritable();
+            const initialWatchTimeData: WatchTimeData = {
+              totalMinutes: 0,
+              date: new Date().toDateString(),
+              history: []
+            };
+            await writable.write(JSON.stringify(initialWatchTimeData, null, 2));
+            await writable.close();
+            setWatchTimeFileHandle(newWatchTimeFileHandle);
+            console.log('Created new watch_time.json file in the selected directory for automatic saves');
+          } catch (error) {
+            console.log('Could not create watch_time.json file (will need manual save)');
+          }
         }
         
         // Get directory info
@@ -2079,7 +2605,34 @@ function App() {
         }
         
         if (loadedCoinData) {
+          // Clean duplicates one more time before setting the data
+          if (loadedCoinData.history && Array.isArray(loadedCoinData.history)) {
+            const originalHistoryLength = loadedCoinData.history.length;
+            loadedCoinData.history = removeDuplicateCoinEntries(loadedCoinData.history);
+            
+            if (originalHistoryLength !== loadedCoinData.history.length) {
+              console.log(`🧹 Final cleanup: removed ${originalHistoryLength - loadedCoinData.history.length} duplicate entries`);
+            }
+          }
+          
           setCoinData(loadedCoinData);
+          // Try to get the file handle for future automatic saves
+          try {
+            const coinsFileHandle = await dirHandle.getFileHandle('coins_earned.json');
+            setCoinsFileHandle(coinsFileHandle);
+            console.log('Stored coins_earned.json file handle for automatic saves');
+          } catch (error) {
+            console.log('Could not get file handle for coins_earned.json (will need manual save)');
+          }
+          
+          // Try to get the watch time file handle for future automatic saves
+          try {
+            const watchTimeFileHandle = await dirHandle.getFileHandle('watch_time.json');
+            setWatchTimeFileHandle(watchTimeFileHandle);
+            console.log('Stored watch_time.json file handle for automatic saves');
+          } catch (error) {
+            console.log('Could not get file handle for watch_time.json (will need manual save)');
+          }
           console.log(`Successfully loaded coin data: ${loadedCoinData.totalCoins} total coins`);
         }
         
@@ -2597,37 +3150,7 @@ function App() {
 
   // Function to generate a random clip with 80/20 study/relax ratio
   // Function to check if a time range overlaps too much with memorized clips
-  const hasExcessiveOverlap = (range: VideoTimeRange, videoName: string): boolean => {
-    const memorizedClipsForVideo = clips.filter(clip => 
-      clip.videoName === videoName && clip.memorized
-    );
-    
-    for (const memorizedClip of memorizedClipsForVideo) {
-      const overlapStart = Math.max(range.startTime, memorizedClip.startTime);
-      const overlapEnd = Math.min(range.endTime, memorizedClip.endTime);
-      
-      if (overlapStart < overlapEnd) {
-        // There is an overlap, calculate the overlap percentage
-        const overlapDuration = overlapEnd - overlapStart;
-        const memorizedClipDuration = memorizedClip.endTime - memorizedClip.startTime;
-        const overlapPercentage = (overlapDuration / memorizedClipDuration) * 100;
-        
-        // Allow only 10% overlap at the beginning and 10% at the end
-        const allowedOverlapStart = memorizedClip.startTime + (memorizedClipDuration * 0.1);
-        const allowedOverlapEnd = memorizedClip.endTime - (memorizedClipDuration * 0.1);
-        
-        // Check if the overlap extends beyond the allowed 10% zones
-        const excessiveOverlap = overlapStart < allowedOverlapStart || overlapEnd > allowedOverlapEnd;
-        
-        if (excessiveOverlap) {
-          console.log(`🚫 Clip overlaps too much with memorized clip: ${memorizedClip.startTime}s-${memorizedClip.endTime}s (overlap: ${overlapPercentage.toFixed(1)}%)`);
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  };
+
 
   const generateRandomClip = (): VideoFile | null => {
     console.log('Generating random clip, videoRanges length:', videoRanges.length);
@@ -2847,6 +3370,10 @@ function App() {
                 onLoadCoinDataFromFile={loadCoinDataFromFile}
                 onSaveCoinDataToFile={saveCoinDataToFile}
                 onCreateSampleCoinDataFile={createSampleCoinDataFile}
+                watchTimeData={watchTimeData}
+                onLoadWatchTimeDataFromFile={loadWatchTimeDataFromFile}
+                onSaveWatchTimeDataToFile={saveWatchTimeDataToFile}
+                onCreateSampleWatchTimeDataFile={createSampleWatchTimeDataFile}
                 onStartApp={async () => {
           // Calculate time ranges before starting the video feed
           if (videoRanges.length === 0 && (relaxVideos.length > 0 || studyVideos.length > 0)) {
@@ -2856,6 +3383,7 @@ function App() {
           setCurrentPage('video-feed');
         }}
                 canStartApp={relaxVideos.length > 0 || studyVideos.length > 0}
+                watchingProgress={calculateDailyWatchingProgress()}
               />
             )}
             

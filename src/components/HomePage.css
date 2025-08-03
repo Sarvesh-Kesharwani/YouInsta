@@ -224,4 +224,183 @@
     font-size: 0.95rem;
     min-width: 180px;
   }
+}
+
+/* Watch Time Display */
+.home-watch-time-display {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.watch-time-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.watch-time-info .watch-time-count {
+  font-size: 24px;
+  font-weight: 700;
+  color: #60a5fa;
+}
+
+.watch-time-info .watch-time-today {
+  font-size: 14px;
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.watch-time-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.watch-time-history .history-entry {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Watch Time Chart Container */
+.watch-time-chart-container {
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.watch-time-chart-container h3 {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Watch Time File Buttons */
+.watch-time-file-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.load-watch-time-btn,
+.save-watch-time-btn,
+.create-watch-time-sample-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: white;
+  box-shadow: 0 4px 15px rgba(96, 165, 250, 0.3);
+}
+
+.load-watch-time-btn:hover,
+.save-watch-time-btn:hover,
+.create-watch-time-sample-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(96, 165, 250, 0.4);
+}
+
+.save-watch-time-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.save-watch-time-btn:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.create-watch-time-sample-btn {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.create-watch-time-sample-btn:hover {
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+/* Responsive design for watch time display */
+@media (max-width: 768px) {
+  .home-watch-time-display {
+    padding: 15px;
+  }
+  
+  .watch-time-file-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .load-watch-time-btn,
+  .save-watch-time-btn,
+  .create-watch-time-sample-btn {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  
+  .watch-time-chart-container {
+    padding: 10px;
+  }
+  
+  .watch-time-chart-container h3 {
+    font-size: 1.1rem;
+  }
+  
+  .watch-time-info .watch-time-count {
+    font-size: 20px;
+  }
+  
+  .watch-time-info .watch-time-today {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-watch-time-display {
+    padding: 12px;
+  }
+  
+  .watch-time-file-buttons {
+    gap: 6px;
+  }
+  
+  .load-watch-time-btn,
+  .save-watch-time-btn,
+  .create-watch-time-sample-btn {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+  
+  .watch-time-chart-container {
+    padding: 8px;
+  }
+  
+  .watch-time-chart-container h3 {
+    font-size: 1rem;
+  }
+  
+  .watch-time-info .watch-time-count {
+    font-size: 18px;
+  }
+  
+  .watch-time-info .watch-time-today {
+    font-size: 12px;
+  }
 } 
