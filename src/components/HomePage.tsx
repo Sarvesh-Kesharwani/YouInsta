@@ -1,4 +1,5 @@
 import React from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './HomePage.css';
 
 interface CoinData {
@@ -46,6 +47,53 @@ const HomePage: React.FC<HomePageProps> = ({
               {entry.date}: +{entry.coins}
             </div>
           ))}
+        </div>
+        
+        {/* Coin Earnings Chart */}
+        <div className="coin-chart-container">
+          <h3>📈 Daily Coin Earnings</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={coinData.history.slice(-7)} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+              <XAxis 
+                dataKey="date" 
+                stroke="rgba(255, 255, 255, 0.7)"
+                fontSize={12}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                }}
+              />
+              <YAxis 
+                stroke="rgba(255, 255, 255, 0.7)"
+                fontSize={12}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white'
+                }}
+                labelFormatter={(value) => {
+                  const date = new Date(value);
+                  return date.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  });
+                }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="coins" 
+                stroke="#4ade80" 
+                strokeWidth={3}
+                dot={{ fill: '#4ade80', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: '#4ade80', strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
         
         {/* Coin Management Buttons */}

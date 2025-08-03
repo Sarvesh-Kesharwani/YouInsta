@@ -1179,28 +1179,40 @@ function App() {
 
   // Function to handle quiz answers
   const handleQuizAnswer = (isCorrect: boolean, currentClip: VideoFile | null) => {
-    if (isCorrect) {
-      addCoins(1);
-      console.log('Correct answer! +1 coin');
-      
-      // Update quiz status for the current clip
-      if (currentClip) {
-        updateClipQuizStatus(currentClip, 'passed');
+    console.log('🎯 Quiz answer received:', { isCorrect, currentClip: currentClip?.name });
+    console.log('💰 Current coin data before:', coinData);
+    
+    try {
+      if (isCorrect) {
+        addCoins(1);
+        console.log('✅ Correct answer! +1 coin added');
         
-        // If the answer was correct and the clip is watched 80% or more, mark it as memorized
-        if (isClipWatched(currentClip)) {
-          markAsMemorized(currentClip);
-          console.log('Clip was watched 80% or more and answer was correct - marked as memorized');
+        // Update quiz status for the current clip
+        if (currentClip) {
+          updateClipQuizStatus(currentClip, 'passed');
+          
+          // If the answer was correct and the clip is watched 80% or more, mark it as memorized
+          if (isClipWatched(currentClip)) {
+            markAsMemorized(currentClip);
+            console.log('🧠 Clip was watched 80% or more and answer was correct - marked as memorized');
+          }
+        }
+      } else {
+        removeCoins(1);
+        console.log('❌ Incorrect answer! -1 coin removed');
+        
+        // Update quiz status for the current clip
+        if (currentClip) {
+          updateClipQuizStatus(currentClip, 'failed');
         }
       }
-    } else {
-      removeCoins(1);
-      console.log('Incorrect answer! -1 coin');
       
-      // Update quiz status for the current clip
-      if (currentClip) {
-        updateClipQuizStatus(currentClip, 'failed');
-      }
+      // Log updated coin data after a short delay to see the change
+      setTimeout(() => {
+        console.log('💰 Updated coin data after:', coinData);
+      }, 100);
+    } catch (error) {
+      console.error('❌ Error in handleQuizAnswer:', error);
     }
   };
 
@@ -1286,7 +1298,8 @@ function App() {
       // Update today's entry or create new one
       const todayIndex = newHistory.findIndex(entry => entry.date === today);
       if (todayIndex >= 0) {
-        newHistory[todayIndex].coins += amount;
+        // Create a new object instead of modifying the existing one
+        newHistory[todayIndex] = { ...newHistory[todayIndex], coins: newHistory[todayIndex].coins + amount };
       } else {
         newHistory.push({ date: today, coins: amount });
       }
@@ -1310,7 +1323,8 @@ function App() {
       // Update today's entry
       const todayIndex = newHistory.findIndex(entry => entry.date === today);
       if (todayIndex >= 0) {
-        newHistory[todayIndex].coins = Math.max(0, newHistory[todayIndex].coins - amount);
+        // Create a new object instead of modifying the existing one
+        newHistory[todayIndex] = { ...newHistory[todayIndex], coins: Math.max(0, newHistory[todayIndex].coins - amount) };
       }
       
       return {
@@ -2312,7 +2326,12 @@ function App() {
         const actualDuration = await getVideoDuration(video);
         const timeRanges: VideoTimeRange[] = [];
         
-        // Generate clips for the entire video duration
+        // Get existing memorized clips for this video
+        const existingMemorizedClips = clips.filter(clip => 
+          clip.videoName === video.name && clip.memorized
+        );
+        
+        // Generate clips for the entire video duration, avoiding excessive overlap with memorized clips
         let startTime = 0;
         while (startTime < actualDuration) {
           const clipDuration = getRandomClipDuration();
@@ -2320,16 +2339,37 @@ function App() {
           
           // Only add clips that are at least 30 seconds long
           if (endTime - startTime >= 30) {
-            timeRanges.push({
-              startTime: startTime,
-              endTime: endTime
-            });
+            const proposedRange = { startTime, endTime };
+            
+            // Check if this range overlaps too much with any memorized clip
+            let hasExcessiveOverlap = false;
+            for (const memorizedClip of existingMemorizedClips) {
+              const overlapStart = Math.max(proposedRange.startTime, memorizedClip.startTime);
+              const overlapEnd = Math.min(proposedRange.endTime, memorizedClip.endTime);
+              
+              if (overlapStart < overlapEnd) {
+                const memorizedClipDuration = memorizedClip.endTime - memorizedClip.startTime;
+                const allowedOverlapStart = memorizedClip.startTime + (memorizedClipDuration * 0.1);
+                const allowedOverlapEnd = memorizedClip.endTime - (memorizedClipDuration * 0.1);
+                
+                // Check if the overlap extends beyond the allowed 10% zones
+                if (overlapStart < allowedOverlapStart || overlapEnd > allowedOverlapEnd) {
+                  hasExcessiveOverlap = true;
+                  console.log(`🚫 Skipping range ${startTime}s-${endTime}s due to excessive overlap with memorized clip ${memorizedClip.startTime}s-${memorizedClip.endTime}s`);
+                  break;
+                }
+              }
+            }
+            
+            if (!hasExcessiveOverlap) {
+              timeRanges.push(proposedRange);
+            }
           }
           
           startTime = endTime;
         }
         
-        console.log(`Created ${timeRanges.length} clips for relax video: ${video.name}`);
+        console.log(`Created ${timeRanges.length} clips for relax video: ${video.name} (avoiding excessive overlap with ${existingMemorizedClips.length} memorized clips)`);
         
         const videoWithRanges: VideoWithRanges = {
           video: video,
@@ -2350,7 +2390,12 @@ function App() {
         const actualDuration = await getVideoDuration(video);
         const timeRanges: VideoTimeRange[] = [];
         
-        // Generate clips for the entire video duration
+        // Get existing memorized clips for this video
+        const existingMemorizedClips = clips.filter(clip => 
+          clip.videoName === video.name && clip.memorized
+        );
+        
+        // Generate clips for the entire video duration, avoiding excessive overlap with memorized clips
         let startTime = 0;
         while (startTime < actualDuration) {
           const clipDuration = getRandomClipDuration();
@@ -2358,16 +2403,37 @@ function App() {
           
           // Only add clips that are at least 30 seconds long
           if (endTime - startTime >= 30) {
-            timeRanges.push({
-              startTime: startTime,
-              endTime: endTime
-            });
+            const proposedRange = { startTime, endTime };
+            
+            // Check if this range overlaps too much with any memorized clip
+            let hasExcessiveOverlap = false;
+            for (const memorizedClip of existingMemorizedClips) {
+              const overlapStart = Math.max(proposedRange.startTime, memorizedClip.startTime);
+              const overlapEnd = Math.min(proposedRange.endTime, memorizedClip.endTime);
+              
+              if (overlapStart < overlapEnd) {
+                const memorizedClipDuration = memorizedClip.endTime - memorizedClip.startTime;
+                const allowedOverlapStart = memorizedClip.startTime + (memorizedClipDuration * 0.1);
+                const allowedOverlapEnd = memorizedClip.endTime - (memorizedClipDuration * 0.1);
+                
+                // Check if the overlap extends beyond the allowed 10% zones
+                if (overlapStart < allowedOverlapStart || overlapEnd > allowedOverlapEnd) {
+                  hasExcessiveOverlap = true;
+                  console.log(`🚫 Skipping range ${startTime}s-${endTime}s due to excessive overlap with memorized clip ${memorizedClip.startTime}s-${memorizedClip.endTime}s`);
+                  break;
+                }
+              }
+            }
+            
+            if (!hasExcessiveOverlap) {
+              timeRanges.push(proposedRange);
+            }
           }
           
           startTime = endTime;
         }
         
-        console.log(`Created ${timeRanges.length} clips for study video: ${video.name}`);
+        console.log(`Created ${timeRanges.length} clips for study video: ${video.name} (avoiding excessive overlap with ${existingMemorizedClips.length} memorized clips)`);
         
         const videoWithRanges: VideoWithRanges = {
           video: video,
@@ -2389,6 +2455,39 @@ function App() {
   };
 
   // Function to generate a random clip with 80/20 study/relax ratio
+  // Function to check if a time range overlaps too much with memorized clips
+  const hasExcessiveOverlap = (range: VideoTimeRange, videoName: string): boolean => {
+    const memorizedClipsForVideo = clips.filter(clip => 
+      clip.videoName === videoName && clip.memorized
+    );
+    
+    for (const memorizedClip of memorizedClipsForVideo) {
+      const overlapStart = Math.max(range.startTime, memorizedClip.startTime);
+      const overlapEnd = Math.min(range.endTime, memorizedClip.endTime);
+      
+      if (overlapStart < overlapEnd) {
+        // There is an overlap, calculate the overlap percentage
+        const overlapDuration = overlapEnd - overlapStart;
+        const memorizedClipDuration = memorizedClip.endTime - memorizedClip.startTime;
+        const overlapPercentage = (overlapDuration / memorizedClipDuration) * 100;
+        
+        // Allow only 10% overlap at the beginning and 10% at the end
+        const allowedOverlapStart = memorizedClip.startTime + (memorizedClipDuration * 0.1);
+        const allowedOverlapEnd = memorizedClip.endTime - (memorizedClipDuration * 0.1);
+        
+        // Check if the overlap extends beyond the allowed 10% zones
+        const excessiveOverlap = overlapStart < allowedOverlapStart || overlapEnd > allowedOverlapEnd;
+        
+        if (excessiveOverlap) {
+          console.log(`🚫 Clip overlaps too much with memorized clip: ${memorizedClip.startTime}s-${memorizedClip.endTime}s (overlap: ${overlapPercentage.toFixed(1)}%)`);
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
+
   const generateRandomClip = (): VideoFile | null => {
     console.log('Generating random clip, videoRanges length:', videoRanges.length);
     if (videoRanges.length === 0) {
@@ -2423,46 +2522,88 @@ function App() {
       return null;
     }
     
-    // Filter out time ranges that are already memorized
+    // Filter out time ranges that are already memorized (temporarily disable overlap restrictions)
     const availableRanges = selectedVideoRange.timeRanges.filter(range => {
-      return !clips.some(clipEntry => 
+      // Check if this exact range is already memorized
+      const isMemorized = clips.some(clipEntry => 
         clipEntry.videoName === selectedVideoRange.video.name &&
         clipEntry.startTime === range.startTime &&
         clipEntry.endTime === range.endTime &&
         clipEntry.memorized
       );
+      
+      return !isMemorized;
     });
     
     // If no available ranges, try another video
     if (availableRanges.length === 0) {
+      console.log(`No available ranges for ${selectedVideoRange.video.name}, trying other videos...`);
+      
       // Try to find any video with available ranges
       const allVideos = [...studyVideos, ...relaxVideos];
       for (const videoRange of allVideos) {
+        if (videoRange.video.name === selectedVideoRange.video.name) continue; // Skip the one we already tried
+        
         const availableRangesForVideo = videoRange.timeRanges.filter(range => {
-          return !clips.some(clipEntry => 
+          // Check if this exact range is already memorized
+          const isMemorized = clips.some(clipEntry => 
             clipEntry.videoName === videoRange.video.name &&
             clipEntry.startTime === range.startTime &&
             clipEntry.endTime === range.endTime &&
             clipEntry.memorized
           );
+          
+          return !isMemorized;
         });
         
         if (availableRangesForVideo.length > 0) {
+          console.log(`Found available ranges in ${videoRange.video.name}`);
           selectedVideoRange = videoRange;
           availableRanges.splice(0, availableRanges.length, ...availableRangesForVideo);
           break;
         }
-      }
-      
-      // If still no available ranges, return null
-      if (availableRanges.length === 0) {
-        return null;
-      }
-    }
+             }
+       
+       // If still no available ranges, try with relaxed overlap restrictions
+       if (availableRanges.length === 0) {
+         console.log('No available ranges found in any video after overlap filtering, trying with relaxed restrictions...');
+         
+         // Try to find any video with available ranges, ignoring overlap restrictions
+         const allVideos = [...studyVideos, ...relaxVideos];
+         for (const videoRange of allVideos) {
+           const availableRangesForVideo = videoRange.timeRanges.filter(range => {
+             // Only check if this exact range is already memorized (no overlap restrictions)
+             const isMemorized = clips.some(clipEntry => 
+               clipEntry.videoName === videoRange.video.name &&
+               clipEntry.startTime === range.startTime &&
+               clipEntry.endTime === range.endTime &&
+               clipEntry.memorized
+             );
+             
+             return !isMemorized;
+           });
+           
+           if (availableRangesForVideo.length > 0) {
+             console.log(`Found ${availableRangesForVideo.length} available ranges in ${videoRange.video.name} with relaxed restrictions`);
+             selectedVideoRange = videoRange;
+             availableRanges.splice(0, availableRanges.length, ...availableRangesForVideo);
+             break;
+           }
+         }
+         
+         // If still no available ranges, return null
+         if (availableRanges.length === 0) {
+           console.log('No available ranges found even with relaxed restrictions');
+           return null;
+         }
+       }
+     }
     
     // Pick a random time range from available ranges
     const randomRangeIndex = Math.floor(Math.random() * availableRanges.length);
     const selectedRange = availableRanges[randomRangeIndex];
+    
+    console.log(`✅ Generated clip from ${selectedVideoRange.video.name}: ${selectedRange.startTime}s-${selectedRange.endTime}s`);
     
     // Create a clip object
     const clip: VideoFile = {

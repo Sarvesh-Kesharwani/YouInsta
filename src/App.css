@@ -95,6 +95,24 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Coin Chart Container */
+.coin-chart-container {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.coin-chart-container h3 {
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 /* Coin File Buttons */
 .coin-file-buttons {
   display: flex;
@@ -1449,6 +1467,14 @@
     font-size: 12px;
     padding: 8px 12px;
   }
+  
+  .coin-chart-container {
+    padding: 10px;
+  }
+  
+  .coin-chart-container h3 {
+    font-size: 1rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1462,6 +1488,14 @@
   
   .coin-info .coin-earned-today {
     font-size: 12px;
+  }
+  
+  .coin-chart-container {
+    padding: 8px;
+  }
+  
+  .coin-chart-container h3 {
+    font-size: 0.9rem;
   }
 }
 
