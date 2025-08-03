@@ -115,6 +115,52 @@
   margin-bottom: 30px;
 }
 
+.clips-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.clips-section-header h2 {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.toggle-clips-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.toggle-clips-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.toggle-clips-btn:active {
+  transform: translateY(0);
+}
+
+/* Legacy support for existing h2 styles */
 .clips-section h2 {
   color: white;
   text-align: center;
@@ -402,6 +448,24 @@
     font-size: 11px;
   }
 
+  .clips-section-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .clips-section-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 0;
+    text-align: center;
+  }
+
+  .toggle-clips-btn {
+    align-self: center;
+    min-width: 50px;
+    height: 45px;
+  }
+
   .clips-section h2 {
     font-size: 1.2rem;
   }
@@ -527,6 +591,25 @@
 
   .status-note {
     font-size: 10px;
+  }
+
+  .clips-section-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .clips-section-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0;
+    text-align: center;
+  }
+
+  .toggle-clips-btn {
+    align-self: center;
+    min-width: 45px;
+    height: 40px;
+    font-size: 14px;
   }
 
   .clips-section h2 {

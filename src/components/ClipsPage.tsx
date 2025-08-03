@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './ClipsPage.css';
 
 interface ClipEntry {
@@ -25,6 +25,9 @@ interface ClipsPageProps {
   onClearClips: () => void;
   getCurrentMemoryClips: () => ClipEntry[];
   isAppStarted: boolean;
+  debugClipsState?: () => void;
+  testAddClip?: () => void;
+  addAllPossibleClips?: () => void;
 }
 
 const ClipsPage: React.FC<ClipsPageProps> = ({
@@ -36,8 +39,12 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
   onRemoveClip,
   onClearClips,
   getCurrentMemoryClips,
-  isAppStarted
+  isAppStarted,
+  debugClipsState,
+  testAddClip,
+  addAllPossibleClips
 }) => {
+  const [isClipsListExpanded, setIsClipsListExpanded] = useState(true);
   return (
     <div className="clips-page">
       <div className="clips-header">
@@ -81,48 +88,112 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
           >
             📝 Create Sample File
           </button>
+          {debugClipsState && (
+            <button 
+              className="debug-btn"
+              onClick={debugClipsState}
+              title="Debug clips state"
+            >
+              🔍 Debug State
+            </button>
+          )}
+          {testAddClip && (
+            <button 
+              className="test-btn"
+              onClick={testAddClip}
+              title="Add test clip"
+            >
+              🧪 Add Test Clip
+            </button>
+          )}
+          {addAllPossibleClips && (
+            <button 
+              className="add-all-clips-btn"
+              onClick={addAllPossibleClips}
+              title="Add all possible clips from video ranges to database"
+            >
+              📝 Add All Possible Clips
+            </button>
+          )}
         </div>
         
-        {/* Clips List */}
+        {/* Statistics Section */}
+        <div className="clips-statistics">
+          <h3>📊 Clips Statistics</h3>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-number">{clips.length}</div>
+              <div className="stat-label">Total Clips</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-number">{clips.filter(c => c.memorized).length}</div>
+              <div className="stat-label">Memorized</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-number">{clips.filter(c => c.watched).length}</div>
+              <div className="stat-label">Watched</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-number">{clips.filter(c => c.quizStatus === 'passed').length}</div>
+              <div className="stat-label">Quiz Passed</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Clips List with Toggle */}
         <div className="clips-section">
-          <h2>📋 All Clips ({clips.length})</h2>
-          {clips.length > 0 ? (
-            <div className="clips-list">
-              {clips.map((clip) => (
-                <div key={clip.id} className="clip-item">
-                  <div className="clip-info">
-                    <span className="clip-name">{clip.videoName}</span>
-                    <span className="clip-time">
-                      {Math.floor(clip.startTime / 60)}:{(clip.startTime % 60).toString().padStart(2, '0')} - 
-                      {Math.floor(clip.endTime / 60)}:{(clip.endTime % 60).toString().padStart(2, '0')}
-                    </span>
-                    <span className="clip-category">{clip.category}</span>
-                    <span className="clip-status">
-                      {clip.memorized ? '🧠 Memorized' : '❌ Not Memorized'} | 
-                      {clip.watched ? ` 👁️ Watched (${clip.watchPercentage}%)` : ' 👁️ Not Watched'} |
-                      {clip.quizStatus === 'passed' ? ' ✅ Quiz Passed' : 
-                       clip.quizStatus === 'failed' ? ' ❌ Quiz Failed' : ' ❓ Quiz Not Answered'}
-                      {clip.lastWatchedAt && ` | Last: ${new Date(clip.lastWatchedAt).toLocaleTimeString()}`}
-                    </span>
-                  </div>
+          <div className="clips-section-header">
+            <h2>📋 All Clips ({clips.length})</h2>
+            <button 
+              className="toggle-clips-btn"
+              onClick={() => setIsClipsListExpanded(!isClipsListExpanded)}
+              title={isClipsListExpanded ? "Collapse clips list" : "Expand clips list"}
+            >
+              {isClipsListExpanded ? '🔽' : '▶️'}
+            </button>
+          </div>
+          
+          {isClipsListExpanded && (
+            <>
+              {clips.length > 0 ? (
+                <div className="clips-list">
+                  {clips.map((clip) => (
+                    <div key={clip.id} className="clip-item">
+                      <div className="clip-info">
+                        <span className="clip-name">{clip.videoName}</span>
+                        <span className="clip-time">
+                          {Math.floor(clip.startTime / 60)}:{(clip.startTime % 60).toString().padStart(2, '0')} - 
+                          {Math.floor(clip.endTime / 60)}:{(clip.endTime % 60).toString().padStart(2, '0')}
+                        </span>
+                        <span className="clip-category">{clip.category}</span>
+                        <span className="clip-status">
+                          {clip.memorized ? '🧠 Memorized' : '❌ Not Memorized'} | 
+                          {clip.watched ? ` 👁️ Watched (${clip.watchPercentage}%)` : ' 👁️ Not Watched'} |
+                          {clip.quizStatus === 'passed' ? ' ✅ Quiz Passed' : 
+                           clip.quizStatus === 'failed' ? ' ❌ Quiz Failed' : ' ❓ Quiz Not Answered'}
+                          {clip.lastWatchedAt && ` | Last: ${new Date(clip.lastWatchedAt).toLocaleTimeString()}`}
+                        </span>
+                      </div>
+                      <button 
+                        className="remove-clip-btn"
+                        onClick={() => onRemoveClip(clip.id)}
+                        title="Remove clip"
+                      >
+                        ❌
+                      </button>
+                    </div>
+                  ))}
                   <button 
-                    className="remove-clip-btn"
-                    onClick={() => onRemoveClip(clip.id)}
-                    title="Remove clip"
+                    className="clear-clips-btn"
+                    onClick={onClearClips}
                   >
-                    ❌
+                    🗑️ Clear All Clips
                   </button>
                 </div>
-              ))}
-              <button 
-                className="clear-clips-btn"
-                onClick={onClearClips}
-              >
-                🗑️ Clear All Clips
-              </button>
-            </div>
-          ) : (
-            <p className="no-clips">No clips yet. Start the app and clips will be added as you watch them!</p>
+              ) : (
+                <p className="no-clips">No clips yet. Start the app and clips will be added as you watch them!</p>
+              )}
+            </>
           )}
         </div>
 
@@ -155,29 +226,6 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
             )}
           </div>
         )}
-
-        {/* Statistics Section */}
-        <div className="clips-statistics">
-          <h3>📊 Clips Statistics</h3>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-number">{clips.length}</div>
-              <div className="stat-label">Total Clips</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">{clips.filter(c => c.memorized).length}</div>
-              <div className="stat-label">Memorized</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">{clips.filter(c => c.watched).length}</div>
-              <div className="stat-label">Watched</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">{clips.filter(c => c.quizStatus === 'passed').length}</div>
-              <div className="stat-label">Quiz Passed</div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

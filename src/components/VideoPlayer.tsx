@@ -7,7 +7,7 @@ interface VideoPlayerProps {
   isPlaying: boolean;
   onPlayPause: () => void;
   onProgressUpdate?: (progress: number) => void;
-  onReach80Percent?: () => void;
+  onReach80Percent?: (progress: number) => void;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause, onProgressUpdate, onReach80Percent }) => {
@@ -76,7 +76,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
         // Check if we've reached 80% and call the callback only once
         if (progressPercentage >= 80 && onReach80Percent && !hasCalled80Percent) {
           setHasCalled80Percent(true);
-          onReach80Percent();
+          onReach80Percent(progressPercentage);
         }
         
         // Check if we've reached the end of the clip
@@ -96,7 +96,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
         // Check if we've reached 80% and call the callback only once
         if (progressPercentage >= 80 && onReach80Percent && !hasCalled80Percent) {
           setHasCalled80Percent(true);
-          onReach80Percent();
+          onReach80Percent(progressPercentage);
         }
       }
     };

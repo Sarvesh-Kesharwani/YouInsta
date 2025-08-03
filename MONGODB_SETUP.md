@@ -1,223 +1,230 @@
 # MongoDB Setup Guide for YouInsta
 
-This guide will help you set up MongoDB for the YouInsta application.
+## Overview
+YouInsta now supports MongoDB for data persistence, with automatic fallback to localStorage when MongoDB is not available.
 
-## Prerequisites
+## Option 1: Local MongoDB Installation
 
-1. **Node.js** (version 16 or higher)
-2. **MongoDB** (version 5.0 or higher)
-
-## MongoDB Installation
-
-### Option 1: MongoDB Community Server (Recommended)
-
+### Windows
 1. **Download MongoDB Community Server**:
-   - Visit [MongoDB Download Center](https://www.mongodb.com/try/download/community)
-   - Select your operating system and download the installer
-   - Follow the installation wizard
+   - Go to [MongoDB Download Center](https://www.mongodb.com/try/download/community)
+   - Select "Windows" and download the MSI installer
+   - Run the installer and follow the setup wizard
 
 2. **Start MongoDB Service**:
-   - **Windows**: MongoDB should start automatically as a service
-   - **macOS**: `brew services start mongodb-community`
-   - **Linux**: `sudo systemctl start mongod`
+   ```cmd
+   # Start MongoDB as a Windows service
+   net start MongoDB
+   
+   # Or start manually
+   "C:\Program Files\MongoDB\Server\{version}\bin\mongod.exe" --dbpath="C:\data\db"
+   ```
 
-### Option 2: MongoDB Atlas (Cloud)
+### macOS
+1. **Using Homebrew**:
+   ```bash
+   brew tap mongodb/brew
+   brew install mongodb-community
+   brew services start mongodb/brew/mongodb-community
+   ```
 
-1. **Create MongoDB Atlas Account**:
-   - Visit [MongoDB Atlas](https://www.mongodb.com/atlas)
+2. **Manual Installation**:
+   - Download from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
+   - Extract and add to PATH
+   - Start with: `mongod --dbpath /usr/local/var/mongodb`
+
+### Linux (Ubuntu/Debian)
+```bash
+# Import MongoDB public GPG key
+wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+
+# Create list file for MongoDB
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Update package database
+sudo apt-get update
+
+# Install MongoDB
+sudo apt-get install -y mongodb-org
+
+# Start MongoDB
+sudo systemctl start mongod
+sudo systemctl enable mongod
+```
+
+## Option 2: MongoDB Atlas (Cloud)
+
+1. **Create Free Cluster**:
+   - Go to [MongoDB Atlas](https://www.mongodb.com/atlas)
    - Sign up for a free account
-   - Create a new cluster
+   - Create a new cluster (free tier available)
 
 2. **Get Connection String**:
    - Click "Connect" on your cluster
    - Choose "Connect your application"
    - Copy the connection string
 
-## Project Setup
+3. **Update Environment Variables**:
+   Create a `.env` file in the server directory:
+   ```env
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/youinsta?retryWrites=true&w=majority
+   ```
 
-### 1. Install Dependencies
+## Option 3: Docker (Recommended for Development)
+
+1. **Install Docker**:
+   - Download from [Docker Desktop](https://www.docker.com/products/docker-desktop)
+
+2. **Run MongoDB Container**:
+   ```bash
+   docker run -d --name mongodb -p 27017:27017 mongo:latest
+   ```
+
+3. **Or use Docker Compose**:
+   Create `docker-compose.yml`:
+   ```yaml
+   version: '3.8'
+   services:
+     mongodb:
+       image: mongo:latest
+       ports:
+         - "27017:27017"
+       volumes:
+         - mongodb_data:/data/db
+   
+   volumes:
+     mongodb_data:
+   ```
+   
+   Run with: `docker-compose up -d`
+
+## Starting the Application
+
+1. **Start MongoDB** (if using local installation)
+2. **Start the Server**:
+   ```bash
+   npm run server
+   ```
+3. **Start the Frontend**:
+   ```bash
+   npm run dev
+   ```
+
+## Verification
+
+1. **Check MongoDB Connection**:
+   ```bash
+   curl http://localhost:5000/api/health
+   ```
+   Should return: `{"status":"OK","message":"YouInsta API is running"}`
+
+2. **Check Browser Console**:
+   Look for these messages:
+   ```
+   ✅ MongoDB is available
+   ✅ MongoDB service initialized
+   ```
+
+## Fallback Behavior
+
+If MongoDB is not available, the app will:
+- Automatically fall back to localStorage
+- Continue functioning normally
+- Log warnings in the console
+- Attempt to reconnect on next operation
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"MongoDB connection timeout"**:
+   - Ensure MongoDB is running
+   - Check if port 27017 is available
+   - Verify firewall settings
+
+2. **"500 Internal Server Error"**:
+   - Check server logs for MongoDB connection errors
+   - Ensure MongoDB service is started
+   - Verify connection string format
+
+3. **"Operation buffering timed out"**:
+   - MongoDB server is overloaded or not responding
+   - Check MongoDB logs
+   - Restart MongoDB service
+
+### Debug Commands
 
 ```bash
-npm install
+# Check if MongoDB is running
+netstat -an | grep 27017
+
+# Check MongoDB logs
+tail -f /var/log/mongodb/mongod.log
+
+# Connect to MongoDB shell
+mongosh
+
+# List databases
+show dbs
+
+# Use YouInsta database
+use youinsta
+
+# Show collections
+show collections
 ```
 
-### 2. Configure Environment
+## Data Migration
 
-Create a `.env` file in the root directory:
+The app automatically migrates existing localStorage data to MongoDB when:
+- MongoDB is available
+- localStorage contains data
+- MongoDB is empty
+
+Migration includes:
+- User preferences and configuration
+- Directory information
+- Clips and watch history
+- Coin data and statistics
+- App state and video ranges
+
+## Environment Variables
+
+Create a `.env` file in the server directory:
 
 ```env
-# MongoDB Configuration
+# MongoDB Connection
 MONGODB_URI=mongodb://localhost:27017/youinsta
 
 # Server Configuration
 PORT=5000
-
-# Environment
 NODE_ENV=development
+
+# Optional: MongoDB Atlas
+# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/youinsta?retryWrites=true&w=majority
 ```
 
-**For MongoDB Atlas**, replace the MONGODB_URI with your connection string:
-```env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/youinsta
-```
+## Performance Tips
 
-### 3. Start the Application
+1. **Indexing**: MongoDB automatically creates indexes for efficient queries
+2. **Connection Pooling**: Mongoose handles connection pooling automatically
+3. **Caching**: Consider implementing Redis for session caching in production
+4. **Backup**: Set up regular MongoDB backups for production deployments
 
-#### Development Mode (Frontend + Backend)
-```bash
-npm run dev:full
-```
+## Production Deployment
 
-This will start both the React frontend (port 5173) and the Express backend (port 5000).
-
-#### Individual Services
-```bash
-# Start backend only
-npm run server
-
-# Start frontend only
-npm run dev
-```
-
-## Database Structure
-
-The application creates two collections in MongoDB:
-
-### 1. `userpreferences` Collection
-Stores user configuration and application state:
-- User directories (relax, study, combined)
-- Clip duration settings
-- Video ranges and clip queue
-- Coin system data
-- Application state
-
-### 2. `clips` Collection
-Stores individual clip data:
-- Video path and name
-- Time range (start, end, duration)
-- Watch status and statistics
-- Directory type (relax/study)
-
-## Migration from localStorage
-
-The application includes automatic migration from localStorage to MongoDB:
-
-1. **Automatic Detection**: The app checks for existing localStorage data on startup
-2. **Migration Prompt**: If localStorage data is found, a migration dialog appears
-3. **Data Transfer**: All user preferences and clips are transferred to MongoDB
-4. **Cleanup**: localStorage is cleared after successful migration
-
-### Manual Migration
-
-You can also trigger migration manually:
-
-```javascript
-import { migrationService } from './src/utils/migration';
-
-// Check migration status
-const status = await migrationService.checkMigrationStatus();
-
-// Perform migration
-const result = await migrationService.migrateFromLocalStorage();
-```
-
-## API Endpoints
-
-### User Preferences
-- `GET /api/user-preferences/:userId` - Get user preferences
-- `PUT /api/user-preferences/:userId` - Update user preferences
-- `PATCH /api/user-preferences/:userId` - Patch specific fields
-- `DELETE /api/user-preferences/:userId` - Delete user preferences
-- `POST /api/user-preferences/:userId/reset` - Reset to defaults
-
-### Clips
-- `GET /api/clips` - Get all clips (with filters)
-- `GET /api/clips/:id` - Get specific clip
-- `POST /api/clips` - Create new clip
-- `PUT /api/clips/:id` - Update clip
-- `PUT /api/clips/find-and-update` - Find and update clip by video path
-- `DELETE /api/clips/:id` - Delete clip
-- `POST /api/clips/bulk` - Bulk operations
-- `GET /api/clips/stats/summary` - Get clip statistics
-
-### Health Check
-- `GET /api/health` - Check API status
-
-## Troubleshooting
-
-### MongoDB Connection Issues
-
-1. **Check MongoDB Service**:
-   ```bash
-   # Windows
-   services.msc  # Look for "MongoDB" service
-   
-   # macOS/Linux
-   sudo systemctl status mongod
-   ```
-
-2. **Check Connection String**:
-   - Verify the MONGODB_URI in your `.env` file
-   - Ensure the database name is correct
-   - Check username/password for Atlas
-
-3. **Network Issues**:
-   - Ensure MongoDB is running on the correct port (27017)
-   - Check firewall settings
-   - Verify network connectivity
-
-### Application Issues
-
-1. **Backend Not Starting**:
-   - Check if port 5000 is available
-   - Verify all dependencies are installed
-   - Check console for error messages
-
-2. **Frontend Connection Issues**:
-   - Ensure backend is running on port 5000
-   - Check CORS settings
-   - Verify API_BASE_URL in `src/services/api.ts`
-
-3. **Migration Issues**:
-   - Check browser console for errors
-   - Verify MongoDB connection
-   - Ensure localStorage data is valid
-
-## Development Notes
-
-### File Structure
-```
-server/
-├── index.js              # Main server file
-├── config.js             # Configuration
-├── models/
-│   ├── UserPreferences.js
-│   └── Clip.js
-└── routes/
-    ├── userPreferences.js
-    └── clips.js
-
-src/
-├── services/
-│   └── api.ts            # API service layer
-└── utils/
-    └── migration.ts      # Migration utilities
-```
-
-### Data Flow
-1. **Frontend** → **API Service** → **Express Backend** → **MongoDB**
-2. **Migration**: localStorage → MongoDB (one-time)
-3. **Real-time**: All data operations go through MongoDB
-
-### Performance Considerations
-- MongoDB indexes are created for efficient queries
-- Bulk operations are used for large data transfers
-- Connection pooling is handled by Mongoose
+For production, consider:
+1. **MongoDB Atlas** for managed MongoDB service
+2. **Environment Variables** for secure configuration
+3. **SSL/TLS** for secure connections
+4. **Authentication** for database access
+5. **Backup Strategy** for data protection
+6. **Monitoring** for performance tracking
 
 ## Support
 
 If you encounter issues:
-1. Check the console for error messages
+1. Check the browser console for error messages
 2. Verify MongoDB is running and accessible
-3. Ensure all environment variables are set correctly
-4. Check the network connectivity between frontend and backend 
+3. Check server logs for detailed error information
+4. Ensure all dependencies are installed correctly 
