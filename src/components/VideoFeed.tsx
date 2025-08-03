@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import VideoPlayer from './VideoPlayer';
-import { VideoFile, VideoWithRanges } from '../App';
+import { VideoFile, VideoWithRanges, ClipEntry, CoinData } from '../App';
 import './VideoFeed.css';
 
 interface VideoFeedProps {
@@ -12,17 +12,87 @@ interface VideoFeedProps {
   getInitialClip: () => Promise<VideoFile | null>;
   onClear: () => void;
   onAddMore: () => void;
+  markAsMemorized: (currentClip: VideoFile) => void;
+  clips: ClipEntry[];
+  coinData: CoinData;
+  isClipMemorized: (currentClip: VideoFile) => boolean;
+  addToClips: (currentClip: VideoFile, watchPercentage: number) => Promise<void>;
+  hasOverlappingWatchedClip: (currentClip: VideoFile) => boolean;
+  onQuizAnswer: (isCorrect: boolean, currentClip: VideoFile | null) => void;
+  onVideoChange?: () => void;
+  processedClipsFor80Percent: Set<string>;
 }
 
-const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip, getPreviousClip, getCurrentClip, getInitialClip, onClear, onAddMore }) => {
+const VideoFeed: React.FC<VideoFeedProps> = ({ 
+  videoRanges, 
+  getNextClip, 
+  getPreviousClip, 
+  getInitialClip, 
+  onClear, 
+  // markAsMemorized,
+  // clips,
+  coinData,
+  // isClipMemorized,
+  addToClips,
+  hasOverlappingWatchedClip,
+  onQuizAnswer,
+  onVideoChange,
+  processedClipsFor80Percent
+}) => {
   const [currentVideo, setCurrentVideo] = useState<VideoFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  // const [showCoinAnimation, setShowCoinAnimation] = useState(false);
+  // const [coinAnimationStyle, setCoinAnimationStyle] = useState({});
+  // const [isMemorizeButtonDisabled, setIsMemorizeButtonDisabled] = useState(false);
+  // const memorizeButtonRef = useRef<HTMLButtonElement>(null);
+  const coinDisplayRef = useRef<HTMLDivElement>(null);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizAnswered, setQuizAnswered] = useState(false);
+  // const [videoProgress, setVideoProgress] = useState(0);
+  const [hasReached80Percent, setHasReached80Percent] = useState(false);
+
+  // Function to check if a clip has already been processed for 80% in this session
+  const isClipProcessedFor80Percent = (clip: VideoFile): boolean => {
+    if (!clip.isClip || clip.startTime === undefined || clip.endTime === undefined) {
+      return false;
+    }
+
+    // Get the original video name from the clip ID
+    const originalVideoId = clip.id.split('_clip_')[0];
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === originalVideoId);
+    if (!videoWithRanges) {
+      return false;
+    }
+
+    // Create a unique identifier for this clip (same as in App.tsx)
+    const clipIdentifier = `${videoWithRanges.video.name}_${clip.startTime}_${clip.endTime}`;
+    
+    return processedClipsFor80Percent.has(clipIdentifier);
+  };
+
+  // Function to check if the current video is a relax clip
+  const isRelaxClip = (clip: VideoFile): boolean => {
+    if (!clip.isClip) {
+      return false;
+    }
+
+    // Get the original video ID from the clip ID
+    const originalVideoId = clip.id.split('_clip_')[0];
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === originalVideoId);
+    
+    return videoWithRanges?.category === 'relax';
+  };
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
+
+  // Reset hasReached80Percent when video changes
+  useEffect(() => {
+    setHasReached80Percent(false);
+  }, [currentVideo]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -92,6 +162,62 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip,
     }
   };
 
+  const handleQuizAnswer = (answer: boolean) => {
+    if (currentVideo && !quizAnswered) {
+      const hasOverlap = hasOverlappingWatchedClip(currentVideo);
+      const isCorrect = answer === hasOverlap;
+      
+      onQuizAnswer(isCorrect, currentVideo);
+      setQuizAnswered(true);
+      
+      // Hide quiz after a short delay
+      setTimeout(() => {
+        setShowQuiz(false);
+        setQuizAnswered(false);
+      }, 2000);
+    }
+  };
+
+  // const handleMemorizeClick = () => {
+  //   if (currentVideo && !isMemorizeButtonDisabled) {
+  //     const wasMemorized = isClipMemorized(currentVideo);
+  //     
+  //     // Disable button temporarily to prevent rapid clicking
+  //     setIsMemorizeButtonDisabled(true);
+  //     
+  //     markAsMemorized(currentVideo);
+  //     
+  //     // Show coin animation if adding to memorized (not removing)
+  //     if (!wasMemorized) {
+  //       // Get positions for animation
+  //       const buttonRect = memorizeButtonRef.current?.getBoundingClientRect();
+  //       const coinDisplayRect = coinDisplayRef.current?.getBoundingClientRect();
+  //       
+  //       if (buttonRect && coinDisplayRect) {
+  //         const startX = buttonRect.left + buttonRect.width / 2;
+  //         const startY = buttonRect.top + buttonRect.height / 2;
+  //         const endX = coinDisplayRect.left + coinDisplayRect.width / 2;
+  //         const endY = coinDisplayRect.top + coinDisplayRect.height / 2;
+  //         
+  //         setCoinAnimationStyle({
+  //           '--start-x': `${startX}px`,
+  //           '--start-y': `${startY}px`,
+  //           '--end-x': `${endX}px`,
+  //           '--end-y': `${endY}px`,
+  //         } as React.CSSProperties);
+  //         
+  //         setShowCoinAnimation(true);
+  //         setTimeout(() => setShowCoinAnimation(false), 1000);
+  //         }
+  //       }
+  //       
+  //       // Re-enable button after a short delay
+  //       setTimeout(() => {
+  //         setIsMemorizeButtonDisabled(false);
+  //       }, 500);
+  //     }
+  //   };
+
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -122,6 +248,34 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip,
     initializeVideo();
   }, [videoRanges, currentVideo, getInitialClip]);
 
+  // Show quiz for all clips except relax clips
+  useEffect(() => {
+    if (currentVideo) {
+      // Don't show quiz for relax clips
+      if (isRelaxClip(currentVideo)) {
+        setShowQuiz(false);
+        setQuizAnswered(false);
+      } else {
+        setShowQuiz(true);
+        setQuizAnswered(false);
+      }
+    } else {
+      setShowQuiz(false);
+      setQuizAnswered(false);
+    }
+  }, [currentVideo]);
+
+  // Reset 80% flag when video changes
+  useEffect(() => {
+    setHasReached80Percent(false);
+    // setVideoProgress(0);
+    
+    // Call onVideoChange callback when video changes
+    if (onVideoChange) {
+      onVideoChange();
+    }
+  }, [currentVideo, onVideoChange]);
+
   if (!currentVideo) {
     return (
       <div className="video-feed">
@@ -132,6 +286,8 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip,
     );
   }
 
+  // const isCurrentClipMemorized = isClipMemorized(currentVideo);
+
   return (
     <div 
       className="video-feed"
@@ -141,10 +297,37 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip,
       onTouchEnd={onTouchEnd}
     >
       <div className="video-container">
+        {/* Coin Display */}
+        <div className="coin-display" ref={coinDisplayRef}>
+          <div className="coin-count">
+            🪙 {coinData.totalCoins}
+          </div>
+          <div className="coin-earned-today">
+            Today: +{coinData.earnedToday}
+          </div>
+        </div>
+
+        {/* Coin Animation */}
+        {/* {showCoinAnimation && (
+          <div className="coin-animation" style={coinAnimationStyle}>
+            🪙
+          </div>
+        )} */}
+
         <VideoPlayer
           video={currentVideo}
           isPlaying={isPlaying}
           onPlayPause={() => setIsPlaying(!isPlaying)}
+          onProgressUpdate={() => {}}
+          onReach80Percent={async () => {
+            if (currentVideo && !hasReached80Percent && !isClipProcessedFor80Percent(currentVideo)) {
+              setHasReached80Percent(true);
+              // Add a small delay to prevent rapid successive calls
+              setTimeout(async () => {
+                await addToClips(currentVideo, 80);
+              }, 100);
+            }
+          }}
         />
         
         <div className="video-overlay">
@@ -164,14 +347,6 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip,
             
             <button 
               className="control-btn"
-              onClick={onAddMore}
-              title="Add more videos"
-            >
-              ➕
-            </button>
-            
-            <button 
-              className="control-btn"
               onClick={onClear}
               title="Clear all videos"
             >
@@ -179,6 +354,31 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ videos, videoRanges, getNextClip,
             </button>
           </div>
         </div>
+
+        {/* Quiz for repeated clips */}
+        {showQuiz && (
+          <div className="quiz-overlay">
+            <div className="quiz-content">
+              <p className="quiz-question">Have you watched this clip range before?</p>
+              <div className="quiz-buttons">
+                <button 
+                  className={`quiz-btn ${quizAnswered ? 'answered' : ''}`}
+                  onClick={() => handleQuizAnswer(true)}
+                  disabled={quizAnswered}
+                >
+                  Yes
+                </button>
+                <button 
+                  className={`quiz-btn ${quizAnswered ? 'answered' : ''}`}
+                  onClick={() => handleQuizAnswer(false)}
+                  disabled={quizAnswered}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="navigation-hints">
           <div className="hint">

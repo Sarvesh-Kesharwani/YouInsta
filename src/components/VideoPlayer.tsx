@@ -6,19 +6,25 @@ interface VideoPlayerProps {
   video: VideoFile;
   isPlaying: boolean;
   onPlayPause: () => void;
+  onProgressUpdate?: (progress: number) => void;
+  onReach80Percent?: () => void;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause, onProgressUpdate, onReach80Percent }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [hasCalled80Percent, setHasCalled80Percent] = useState(false);
 
 
       useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
+
+    // Reset 80% flag when video changes
+    setHasCalled80Percent(false);
 
     // Add a timeout to prevent infinite loading
     const loadingTimeout = setTimeout(() => {
@@ -39,7 +45,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
         
         // Set the start time after a small delay to ensure video is ready
         setTimeout(() => {
-          if (videoElement.currentTime !== video.startTime) {
+          if (video.startTime !== undefined && videoElement.currentTime !== video.startTime) {
             videoElement.currentTime = video.startTime;
           }
         }, 100);
@@ -58,12 +64,40 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
         const relativeTime = videoElement.currentTime - video.startTime;
         setCurrentTime(relativeTime);
         
+        // Calculate progress percentage
+        const clipDuration = video.endTime! - video.startTime;
+        const progressPercentage = (relativeTime / clipDuration) * 100;
+        
+        // Call progress update callback
+        if (onProgressUpdate) {
+          onProgressUpdate(progressPercentage);
+        }
+        
+        // Check if we've reached 80% and call the callback only once
+        if (progressPercentage >= 80 && onReach80Percent && !hasCalled80Percent) {
+          setHasCalled80Percent(true);
+          onReach80Percent();
+        }
+        
         // Check if we've reached the end of the clip
         if (video.endTime && videoElement.currentTime >= video.endTime) {
           videoElement.currentTime = video.startTime;
         }
       } else {
         setCurrentTime(videoElement.currentTime);
+        
+        // Calculate progress percentage for full videos
+        const progressPercentage = (videoElement.currentTime / videoElement.duration) * 100;
+        
+        if (onProgressUpdate) {
+          onProgressUpdate(progressPercentage);
+        }
+        
+        // Check if we've reached 80% and call the callback only once
+        if (progressPercentage >= 80 && onReach80Percent && !hasCalled80Percent) {
+          setHasCalled80Percent(true);
+          onReach80Percent();
+        }
       }
     };
 
