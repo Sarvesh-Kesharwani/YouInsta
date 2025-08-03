@@ -43,7 +43,6 @@ export interface WatchedClip {
   startTime: number;
   endTime: number;
   category: 'relax' | 'study';
-  timestamp: number;
   watchPercentage: number;
 }
 
@@ -145,6 +144,33 @@ function App() {
     }
     return { min: 1, max: 5 }; // Default 1-5 minutes
   });
+
+  // Video probability settings
+  const [studyVideoProbability, setStudyVideoProbability] = useState(() => {
+    try {
+      const savedConfig = localStorage.getItem('youinsta_config');
+      if (savedConfig) {
+        const config = JSON.parse(savedConfig);
+        return config.studyVideoProbability || 80; // Default 80%
+      }
+    } catch (error) {
+      console.error('Error loading study video probability from localStorage:', error);
+    }
+    return 80; // Default 80%
+  });
+
+  const [relaxVideoProbability, setRelaxVideoProbability] = useState(() => {
+    try {
+      const savedConfig = localStorage.getItem('youinsta_config');
+      if (savedConfig) {
+        const config = JSON.parse(savedConfig);
+        return config.relaxVideoProbability || 20; // Default 20%
+      }
+    } catch (error) {
+      console.error('Error loading relax video probability from localStorage:', error);
+    }
+    return 20; // Default 20%
+  });
   
   const [memorizedClipsFileHandle, setMemorizedClipsFileHandle] = useState<any>(null);
   const [watchedClipsFileHandle, setWatchedClipsFileHandle] = useState<any>(null);
@@ -231,11 +257,6 @@ function App() {
   useEffect(() => {
     localStorage.setItem('youinsta_memorized_clips', JSON.stringify(memorizedClips));
     
-    // Check for duplicates whenever memorized clips change
-    if (memorizedClips.length > 0) {
-      checkForDuplicateClips();
-    }
-    
     // Also save to JSON file if we have a file handle
     if (memorizedClipsFileHandle && memorizedClips.length > 0) {
       const saveToFile = async () => {
@@ -258,20 +279,37 @@ function App() {
   useEffect(() => {
     localStorage.setItem('youinsta_watched_clips', JSON.stringify(watchedClips));
     
-    // Also save to JSON file if we have a file handle
-    if (watchedClipsFileHandle && watchedClips.length > 0) {
-      const saveToFile = async () => {
-        try {
-          const writable = await watchedClipsFileHandle.createWritable();
-          await writable.write(JSON.stringify(watchedClips, null, 2));
-          await writable.close();
-          console.log('Automatically saved watched clips to JSON file');
-        } catch (error) {
-          console.error('Error auto-saving watched clips to file:', error);
-          // Clear the file handle if there's an error
-          setWatchedClipsFileHandle(null);
+    // Auto-save to JSON file
+    const saveToFile = async () => {
+      try {
+        let fileHandle = watchedClipsFileHandle;
+        
+        // If no file handle exists, create one automatically
+        if (!fileHandle) {
+          fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'watched_clips.json',
+            types: [{
+              description: 'JSON File',
+              accept: { 'application/json': ['.json'] }
+            }]
+          });
+          setWatchedClipsFileHandle(fileHandle);
+          console.log('Created new watched clips file handle for autosave');
         }
-      };
+        
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(watchedClips, null, 2));
+        await writable.close();
+        console.log('Automatically saved watched clips to JSON file');
+      } catch (error) {
+        console.error('Error auto-saving watched clips to file:', error);
+        // Clear the file handle if there's an error
+        setWatchedClipsFileHandle(null);
+      }
+    };
+    
+    // Only attempt to save if we have watched clips or if we have a file handle (to clear the file)
+    if (watchedClips.length > 0 || watchedClipsFileHandle) {
       saveToFile();
     }
   }, [watchedClips, watchedClipsFileHandle]);
@@ -302,9 +340,11 @@ function App() {
     saveConfigToLocalStorage({ 
       clipDurationMinutes,
       isRandomClipDurationEnabled,
-      randomClipDurationRange
+      randomClipDurationRange,
+      studyVideoProbability,
+      relaxVideoProbability
     });
-  }, [clipDurationMinutes, isRandomClipDurationEnabled, randomClipDurationRange]);
+  }, [clipDurationMinutes, isRandomClipDurationEnabled, randomClipDurationRange, studyVideoProbability, relaxVideoProbability]);
 
   // Function to save memorized clips to a JSON file
   const saveMemorizedClipsToFile = async () => {
@@ -357,13 +397,11 @@ function App() {
         // Store the file handle for future automatic saves
         setMemorizedClipsFileHandle(fileHandle);
         console.log(`Loaded ${loadedClips.length} memorized clips from file`);
-        alert(`Successfully loaded ${loadedClips.length} memorized clips! 🧠`);
       } else {
         throw new Error('Invalid file format');
       }
     } catch (error) {
       console.error('Error loading memorized clips from file:', error);
-      alert('Failed to load memorized clips from file. Please try again.');
     }
   };
 
@@ -395,10 +433,8 @@ function App() {
       await writable.close();
       
       console.log('Sample memorized_clips.json file created successfully');
-      alert('Sample memorized_clips.json file created! You can now place this file in your directory and use the Upload button.');
     } catch (error) {
       console.error('Error creating sample file:', error);
-      alert('Failed to create sample file. Please try again.');
     }
   };
 
@@ -504,6 +540,16 @@ function App() {
         console.log(`Loaded random clip duration range: ${config.randomClipDurationRange.min}-${config.randomClipDurationRange.max} minutes`);
       }
       
+      if (config.studyVideoProbability && typeof config.studyVideoProbability === 'number') {
+        setStudyVideoProbability(config.studyVideoProbability);
+        console.log(`Loaded study video probability: ${config.studyVideoProbability}%`);
+      }
+      
+      if (config.relaxVideoProbability && typeof config.relaxVideoProbability === 'number') {
+        setRelaxVideoProbability(config.relaxVideoProbability);
+        console.log(`Loaded relax video probability: ${config.relaxVideoProbability}%`);
+      }
+      
       return;
     } catch (error) {
       console.error('Error loading config from file:', error);
@@ -528,6 +574,16 @@ function App() {
           setRandomClipDurationRange(config.randomClipDurationRange);
           console.log(`Loaded random clip duration range from localStorage: ${config.randomClipDurationRange.min}-${config.randomClipDurationRange.max} minutes`);
         }
+        
+        if (config.studyVideoProbability && typeof config.studyVideoProbability === 'number') {
+          setStudyVideoProbability(config.studyVideoProbability);
+          console.log(`Loaded study video probability from localStorage: ${config.studyVideoProbability}%`);
+        }
+        
+        if (config.relaxVideoProbability && typeof config.relaxVideoProbability === 'number') {
+          setRelaxVideoProbability(config.relaxVideoProbability);
+          console.log(`Loaded relax video probability from localStorage: ${config.relaxVideoProbability}%`);
+        }
       }
     } catch (error) {
       console.error('Error loading config from localStorage:', error);
@@ -539,6 +595,8 @@ function App() {
     clipDurationMinutes: number;
     isRandomClipDurationEnabled?: boolean;
     randomClipDurationRange?: { min: number; max: number };
+    studyVideoProbability?: number;
+    relaxVideoProbability?: number;
   }) => {
     localStorage.setItem('youinsta_config', JSON.stringify(config));
     console.log('Config saved to localStorage successfully');
@@ -551,6 +609,8 @@ function App() {
         clipDurationMinutes, 
         isRandomClipDurationEnabled,
         randomClipDurationRange,
+        studyVideoProbability,
+        relaxVideoProbability,
         version: '1.0.0' 
       };
       const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
@@ -636,7 +696,6 @@ function App() {
           startTime: 10,
           endTime: 30,
           category: 'relax',
-          timestamp: Date.now(),
           watchPercentage: 85
         }
       ];
@@ -655,21 +714,33 @@ function App() {
       await writable.close();
       
       console.log('Sample watched_clips.json file created successfully');
-      alert('Sample watched_clips.json file created! You can now place this file in your directory and use the Upload button.');
     } catch (error) {
       console.error('Error creating sample file:', error);
-      alert('Failed to create sample file. Please try again.');
     }
   };
+
+  // Track which clips have been processed for 80% threshold in this session
+  const [processedClipsFor80Percent, setProcessedClipsFor80Percent] = useState<Set<string>>(new Set());
 
   // Function to add a clip to watched clips
   const addToWatchedClips = (currentClip: VideoFile, watchPercentage: number) => {
     if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
+      console.log('Skipping non-clip or invalid clip');
       return;
     }
 
     const videoWithRanges = videoRanges.find(vr => vr.video.id === currentClip.id.split('_clip_')[0]);
     if (!videoWithRanges) {
+      console.log('Could not find video with ranges for clip:', currentClip.id);
+      return;
+    }
+
+    // Create a unique identifier for this clip
+    const clipIdentifier = `${videoWithRanges.video.name}_${currentClip.startTime}_${currentClip.endTime}`;
+
+    // Check if we've already processed this clip for 80% in this session
+    if (processedClipsFor80Percent.has(clipIdentifier)) {
+      console.log(`Clip already processed for 80% in this session: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
       return;
     }
 
@@ -681,14 +752,24 @@ function App() {
     );
 
     if (existingClip) {
-      // Update the watch percentage if it's higher
-      if (watchPercentage > existingClip.watchPercentage) {
+      // If the clip already exists and has 80% or more watched, don't update it
+      if (existingClip.watchPercentage >= 80) {
+        console.log(`Clip already exists with 80%+ watched: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}% - stopping tracking`);
+        // Mark as processed to prevent further tracking
+        setProcessedClipsFor80Percent(prev => new Set(prev).add(clipIdentifier));
+        return;
+      }
+      
+      // Only update if the new percentage is higher and less than 80%
+      if (watchPercentage > existingClip.watchPercentage && watchPercentage < 80) {
         setWatchedClips(prev => prev.map(clip =>
           clip.id === existingClip.id
-            ? { ...clip, watchPercentage, timestamp: Date.now() }
+            ? { ...clip, watchPercentage }
             : clip
         ));
-        console.log(`Updated watch percentage for clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) to ${watchPercentage}%`);
+        console.log(`Updated watch percentage for existing clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) from ${existingClip.watchPercentage}% to ${watchPercentage}%`);
+      } else {
+        console.log(`Clip already exists with higher or equal watch percentage: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}%, new: ${watchPercentage}%`);
       }
     } else {
       // Add new watched clip
@@ -698,13 +779,15 @@ function App() {
         startTime: currentClip.startTime,
         endTime: currentClip.endTime,
         category: videoWithRanges.category,
-        timestamp: Date.now(),
         watchPercentage
       };
 
       setWatchedClips(prev => [...prev, watchedClip]);
-      console.log(`Added clip to watched: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
+      console.log(`Added new clip to watched: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
     }
+
+    // Mark this clip as processed for 80% in this session
+    setProcessedClipsFor80Percent(prev => new Set(prev).add(clipIdentifier));
   };
 
   // Function to check if a clip has been watched (80% or more)
@@ -713,8 +796,15 @@ function App() {
       return false;
     }
 
+    // Get the original video name from the clip ID
+    const originalVideoId = currentClip.id.split('_clip_')[0];
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === originalVideoId);
+    if (!videoWithRanges) {
+      return false;
+    }
+
     const watchedClip = watchedClips.find(clip =>
-      clip.videoName === currentClip.name &&
+      clip.videoName === videoWithRanges.video.name &&
       clip.startTime === currentClip.startTime &&
       clip.endTime === currentClip.endTime
     );
@@ -728,10 +818,17 @@ function App() {
       return false;
     }
 
+    // Get the original video name from the clip ID
+    const originalVideoId = currentClip.id.split('_clip_')[0];
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === originalVideoId);
+    if (!videoWithRanges) {
+      return false;
+    }
+
     const currentClipDuration = currentClip.endTime - currentClip.startTime;
     
     return watchedClips.some(watchedClip => {
-      if (watchedClip.videoName !== currentClip.name) return false;
+      if (watchedClip.videoName !== videoWithRanges.video.name) return false;
       
       const overlapStart = Math.max(currentClip.startTime!, watchedClip.startTime);
       const overlapEnd = Math.min(currentClip.endTime!, watchedClip.endTime);
@@ -743,14 +840,25 @@ function App() {
   };
 
   // Function to handle quiz answers
-  const handleQuizAnswer = (isCorrect: boolean) => {
+  const handleQuizAnswer = (isCorrect: boolean, currentClip: VideoFile | null) => {
     if (isCorrect) {
       addCoins(1);
       console.log('Correct answer! +1 coin');
+      
+      // If the answer was correct and the clip is in watched_clips.json, add it to memorized_clips.json
+      if (currentClip && isClipWatched(currentClip)) {
+        addToMemorized(currentClip);
+        console.log('Clip was in watched_clips.json and answer was correct - added to memorized_clips.json');
+      }
     } else {
       removeCoins(1);
       console.log('Incorrect answer! -1 coin');
     }
+  };
+
+  // Function to clear processed clips when video changes
+  const clearProcessedClipsFor80Percent = () => {
+    setProcessedClipsFor80Percent(new Set());
   };
 
   // Save combined directory to localStorage whenever it changes
@@ -833,48 +941,9 @@ function App() {
   };
 
   // Function to check for duplicate clips in memorized list
-  const checkForDuplicateClips = () => {
-    const duplicates: { [key: string]: MemorizedClip[] } = {};
-    
-    memorizedClips.forEach(clip => {
-      const key = `${clip.videoName}_${clip.startTime}_${clip.endTime}`;
-      if (!duplicates[key]) {
-        duplicates[key] = [];
-      }
-      duplicates[key].push(clip);
-    });
-    
-    const actualDuplicates = Object.values(duplicates).filter(clips => clips.length > 1);
-    
-    if (actualDuplicates.length > 0) {
-      console.warn('Found duplicate clips in memorized list:', actualDuplicates);
-      return actualDuplicates;
-    } else {
-      console.log('No duplicate clips found in memorized list');
-      return [];
-    }
-  };
 
-  // Function to remove duplicate clips from memorized list
-  const removeDuplicateClips = () => {
-    const uniqueClips: MemorizedClip[] = [];
-    const seenKeys = new Set<string>();
-    
-    memorizedClips.forEach(clip => {
-      const key = `${clip.videoName}_${clip.startTime}_${clip.endTime}`;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        uniqueClips.push(clip);
-      } else {
-        console.log(`Removing duplicate clip: ${clip.videoName} (${clip.startTime}s - ${clip.endTime}s)`);
-      }
-    });
-    
-    if (uniqueClips.length !== memorizedClips.length) {
-      setMemorizedClips(uniqueClips);
-      console.log(`Removed ${memorizedClips.length - uniqueClips.length} duplicate clips`);
-    }
-  };
+
+
 
   // Function to add or remove from memorized (toggle functionality)
   const addToMemorized = (currentClip: VideoFile) => {
@@ -939,12 +1008,7 @@ function App() {
 
   // Function to clear all memorized clips
   const clearMemorizedClips = () => {
-    if (memorizedClips.length > 0) {
-      const shouldClear = confirm('Are you sure you want to clear all memorized clips?');
-      if (shouldClear) {
-        setMemorizedClips([]);
-      }
-    }
+    setMemorizedClips([]);
   };
 
   // Function to recursively find all video files in a directory
@@ -1371,7 +1435,7 @@ function App() {
       const videoFiles = await findVideosInDirectory(dirHandle);
       
       if (videoFiles.length === 0) {
-        alert('No video files found in the selected directory.');
+        console.log('No video files found in the selected directory.');
         return;
       }
       
@@ -1398,7 +1462,6 @@ function App() {
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error('Error selecting directory:', error);
-        alert('Error selecting directory. Please try again.');
       }
     }
   };
@@ -1809,9 +1872,12 @@ function App() {
     
     let selectedVideoRange: VideoWithRanges;
     
-    // 80% chance for study videos, 20% chance for relax videos
+    // Use configurable probabilities for study vs relax videos
     const random = Math.random();
-    if (random < 0.8 && studyVideos.length > 0) {
+    const studyProbability = studyVideoProbability / 100; // Convert percentage to decimal
+    const relaxProbability = relaxVideoProbability / 100; // Convert percentage to decimal
+    
+    if (random < studyProbability && studyVideos.length > 0) {
       // Pick a random study video
       const randomIndex = Math.floor(Math.random() * studyVideos.length);
       selectedVideoRange = studyVideos[randomIndex];
@@ -1883,7 +1949,7 @@ function App() {
   // Function to start the app
   const startApp = async () => {
     if (relaxVideos.length === 0 && studyVideos.length === 0) {
-      alert('Please upload at least one video to start the app');
+      console.log('Please upload at least one video to start the app');
       return;
     }
     
@@ -1929,6 +1995,31 @@ function App() {
                   {entry.date}: +{entry.coins}
                 </div>
               ))}
+            </div>
+            
+            {/* Coin Management Buttons */}
+            <div className="coin-file-buttons">
+              <button 
+                className="load-coin-btn"
+                onClick={loadCoinDataFromFile}
+                title="Load coin data from file"
+              >
+                🪙 Load Coins
+              </button>
+              <button 
+                className="save-coin-btn"
+                onClick={saveCoinDataToFile}
+                title="Save coin data to file"
+              >
+                💾 Save Coins
+              </button>
+              <button 
+                className="create-coin-sample-btn"
+                onClick={createSampleCoinDataFile}
+                title="Create a sample coins_earned.json file"
+              >
+                📝 Create Coin Sample
+              </button>
             </div>
           </div>
 
@@ -2141,6 +2232,67 @@ function App() {
               )}
             </div>
             
+            {/* Video Probability Settings */}
+            <div className="video-probability-container">
+              <h3>🎯 Video Probability Settings</h3>
+              <p className="probability-description">
+                Control the probability of study vs relax videos appearing in the scrolling list
+              </p>
+              
+              <div className="probability-inputs">
+                <div className="probability-input-group">
+                  <label htmlFor="study-probability" className="probability-label">
+                    📚 Study Videos: {studyVideoProbability}%
+                  </label>
+                  <input
+                    id="study-probability"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={studyVideoProbability}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      setStudyVideoProbability(value);
+                      // Automatically adjust relax probability to maintain 100% total
+                      setRelaxVideoProbability(100 - value);
+                    }}
+                    className="probability-slider"
+                    title="Adjust the probability of study videos appearing"
+                  />
+                </div>
+                
+                <div className="probability-input-group">
+                  <label htmlFor="relax-probability" className="probability-label">
+                    🎬 Relax Videos: {relaxVideoProbability}%
+                  </label>
+                  <input
+                    id="relax-probability"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={relaxVideoProbability}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      setRelaxVideoProbability(value);
+                      // Automatically adjust study probability to maintain 100% total
+                      setStudyVideoProbability(100 - value);
+                    }}
+                    className="probability-slider"
+                    title="Adjust the probability of relax videos appearing"
+                  />
+                </div>
+              </div>
+              
+              <div className="probability-summary">
+                <span className="total-probability">
+                  Total: {studyVideoProbability + relaxVideoProbability}%
+                  {studyVideoProbability + relaxVideoProbability !== 100 && (
+                    <span className="warning"> ⚠️ Total should be 100%</span>
+                  )}
+                </span>
+              </div>
+            </div>
+            
             {/* Combined Directory Button */}
             {!combinedDirectory && (
               <div className="combined-directory-button-container">
@@ -2192,49 +2344,6 @@ function App() {
                 title="Create a sample memorized_clips.json file"
               >
                 📝 Create Sample File
-              </button>
-            </div>
-
-            {/* Duplicate Management Buttons */}
-            <div className="duplicate-management-buttons">
-              <button 
-                className="check-duplicates-btn"
-                onClick={checkForDuplicateClips}
-                title="Check for duplicate clips in memorized list"
-              >
-                🔍 Check Duplicates
-              </button>
-              <button 
-                className="remove-duplicates-btn"
-                onClick={removeDuplicateClips}
-                title="Remove duplicate clips from memorized list"
-              >
-                🧹 Remove Duplicates
-              </button>
-            </div>
-
-            {/* Coin Management Buttons */}
-            <div className="coin-file-buttons">
-              <button 
-                className="load-coin-btn"
-                onClick={loadCoinDataFromFile}
-                title="Load coin data from file"
-              >
-                🪙 Load Coins
-              </button>
-              <button 
-                className="save-coin-btn"
-                onClick={saveCoinDataToFile}
-                title="Save coin data to file"
-              >
-                💾 Save Coins
-              </button>
-              <button 
-                className="create-coin-sample-btn"
-                onClick={createSampleCoinDataFile}
-                title="Create a sample coins_earned.json file"
-              >
-                📝 Create Coin Sample
               </button>
             </div>
             
@@ -2352,6 +2461,7 @@ function App() {
           addToWatchedClips={addToWatchedClips}
           hasOverlappingWatchedClip={hasOverlappingWatchedClip}
           onQuizAnswer={handleQuizAnswer}
+          onVideoChange={clearProcessedClipsFor80Percent}
         />
       )}
     </div>

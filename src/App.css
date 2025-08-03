@@ -761,6 +761,167 @@
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Video Probability Settings */
+.video-probability-container {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.video-probability-container h3 {
+  color: white;
+  margin-bottom: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.probability-description {
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.probability-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.probability-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.probability-label {
+  color: white;
+  font-weight: 500;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.probability-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.probability-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.probability-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.probability-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.probability-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.probability-summary {
+  text-align: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.total-probability {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.warning {
+  color: #ff6b6b;
+  font-weight: 600;
+  animation: pulse 2s infinite;
+}
+
+/* Responsive design for video probability settings */
+@media (max-width: 768px) {
+  .video-probability-container {
+    padding: 15px;
+    margin: 15px 0;
+  }
+  
+  .video-probability-container h3 {
+    font-size: 1.1rem;
+  }
+  
+  .probability-description {
+    font-size: 0.85rem;
+  }
+  
+  .probability-label {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .video-probability-container {
+    padding: 12px;
+    margin: 12px 0;
+  }
+  
+  .video-probability-container h3 {
+    font-size: 1rem;
+  }
+  
+  .probability-description {
+    font-size: 0.8rem;
+  }
+  
+  .probability-label {
+    font-size: 0.85rem;
+  }
+  
+  .probability-slider::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .probability-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+  }
+}
+
 /* Memorized Clips Section */
 .memorized-section {
   width: 100%;
@@ -817,46 +978,7 @@
   box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
 }
 
-/* Duplicate Management Buttons */
-.duplicate-management-buttons {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
 
-.check-duplicates-btn,
-.remove-duplicates-btn {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-  min-width: 140px;
-}
-
-.check-duplicates-btn:hover,
-.remove-duplicates-btn:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
-}
-
-.remove-duplicates-btn {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-}
-
-.remove-duplicates-btn:hover {
-  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
-  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
-}
 
 .memorized-section h2 {
   margin: 0 0 20px 0;
@@ -987,16 +1109,7 @@
   font-size: 11px;
 }
 
-  .duplicate-management-buttons {
-    gap: 8px;
-    margin-bottom: 12px;
-  }
 
-  .check-duplicates-btn,
-  .remove-duplicates-btn {
-    padding: 6px 12px;
-    font-size: 11px;
-  }
   
   .memorized-clip-item {
     padding: 10px 12px;
@@ -1041,16 +1154,7 @@
     font-size: 10px;
   }
 
-  .duplicate-management-buttons {
-    gap: 6px;
-    margin-bottom: 10px;
-  }
 
-  .check-duplicates-btn,
-  .remove-duplicates-btn {
-    padding: 5px 10px;
-    font-size: 10px;
-  }
   
   .memorized-clip-item {
     padding: 8px 10px;
@@ -1077,9 +1181,6 @@
   border-radius: 15px;
   padding: 20px;
   margin-bottom: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
@@ -1120,8 +1221,9 @@
 .coin-file-buttons {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-top: 15px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .load-coin-btn,
@@ -1167,8 +1269,6 @@
 /* Responsive design for coin display */
 @media (max-width: 768px) {
   .home-coin-display {
-    flex-direction: column;
-    gap: 15px;
     text-align: center;
   }
   

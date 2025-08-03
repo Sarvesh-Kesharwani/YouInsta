@@ -16,11 +16,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
   const [hasError, setHasError] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [hasCalled80Percent, setHasCalled80Percent] = useState(false);
 
 
       useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
+
+    // Reset 80% flag when video changes
+    setHasCalled80Percent(false);
 
     // Add a timeout to prevent infinite loading
     const loadingTimeout = setTimeout(() => {
@@ -69,8 +73,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
           onProgressUpdate(progressPercentage);
         }
         
-        // Check if we've reached 80% and call the callback
-        if (progressPercentage >= 80 && onReach80Percent) {
+        // Check if we've reached 80% and call the callback only once
+        if (progressPercentage >= 80 && onReach80Percent && !hasCalled80Percent) {
+          setHasCalled80Percent(true);
           onReach80Percent();
         }
         
@@ -88,7 +93,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
           onProgressUpdate(progressPercentage);
         }
         
-        if (progressPercentage >= 80 && onReach80Percent) {
+        // Check if we've reached 80% and call the callback only once
+        if (progressPercentage >= 80 && onReach80Percent && !hasCalled80Percent) {
+          setHasCalled80Percent(true);
           onReach80Percent();
         }
       }

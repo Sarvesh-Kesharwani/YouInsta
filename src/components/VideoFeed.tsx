@@ -19,7 +19,8 @@ interface VideoFeedProps {
   isClipMemorized: (currentClip: VideoFile) => boolean;
   addToWatchedClips: (currentClip: VideoFile, watchPercentage: number) => void;
   hasOverlappingWatchedClip: (currentClip: VideoFile) => boolean;
-  onQuizAnswer: (isCorrect: boolean) => void;
+  onQuizAnswer: (isCorrect: boolean, currentClip: VideoFile | null) => void;
+  onVideoChange?: () => void;
 }
 
 const VideoFeed: React.FC<VideoFeedProps> = ({ 
@@ -33,7 +34,8 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   isClipMemorized,
   addToWatchedClips,
   hasOverlappingWatchedClip,
-  onQuizAnswer
+  onQuizAnswer,
+  onVideoChange
 }) => {
   const [currentVideo, setCurrentVideo] = useState<VideoFile | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -126,7 +128,7 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
       const hasOverlap = hasOverlappingWatchedClip(currentVideo);
       const isCorrect = answer === hasOverlap;
       
-      onQuizAnswer(isCorrect);
+      onQuizAnswer(isCorrect, currentVideo);
       setQuizAnswered(true);
       
       // Hide quiz after a short delay
@@ -222,7 +224,12 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   useEffect(() => {
     setHasReached80Percent(false);
     setVideoProgress(0);
-  }, [currentVideo]);
+    
+    // Call onVideoChange callback when video changes
+    if (onVideoChange) {
+      onVideoChange();
+    }
+  }, [currentVideo, onVideoChange]);
 
   if (!currentVideo) {
     return (
