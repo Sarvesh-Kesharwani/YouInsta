@@ -31,6 +31,33 @@ A modern web application that allows you to upload a folder of videos and scroll
 - WebM
 - M4V
 
+## Configuration File Structure
+
+The `config.json` file contains all user preferences and settings:
+
+```json
+{
+  "clipDurationMinutes": 5,
+  "isRandomClipDurationEnabled": false,
+  "randomClipDurationRange": {
+    "min": 1,
+    "max": 5
+  },
+  "studyVideoProbability": 80,
+  "relaxVideoProbability": 20,
+  "version": "1.0.0"
+}
+```
+
+### Configuration Parameters
+
+- **clipDurationMinutes**: Fixed duration for video clips in minutes (1-60)
+- **isRandomClipDurationEnabled**: Enable/disable random clip duration
+- **randomClipDurationRange**: Min/max range for random clip duration (in minutes)
+- **studyVideoProbability**: Percentage of study videos in the feed (0-100)
+- **relaxVideoProbability**: Percentage of relax videos in the feed (0-100)
+- **version**: Configuration file version for compatibility
+
 ## Getting Started
 
 ### Prerequisites
@@ -98,14 +125,36 @@ npm run preview
 4. **File-based Storage**:
    - Use "💾 Save to File" to export memorized clips as `memorized_clips.json`
    - Place this file in your directory root for automatic loading with "📁 Upload"
-   - Use "📂 Load from File" to manually load memorized clips
 
-5. **Configuration Management**:
-   - Set your preferred clip duration using the "⏱️ Clip Duration" input
-   - Your clip duration preference is automatically saved and restored on app restart
-   - Use "📥 Download Config" to export your current settings as `config.json`
-   - Place `config.json` in your directory root for automatic loading with "📁 Upload"
-   - Use "📝 Create Sample File" to generate a template JSON file
+### Configuration Management
+
+5. **Automatic Configuration Loading**:
+   - The app automatically loads your preferences on startup
+   - **User preferences (localStorage) take priority** over default config.json
+   - All your preferred settings are restored automatically
+   - No need to reconfigure settings every time you restart the app
+
+6. **Configuration Priority System**:
+   - **1st Priority**: User preferences saved in localStorage (your custom settings)
+   - **2nd Priority**: Default configuration from `config.json` (fallback)
+   - **3rd Priority**: Built-in default values (if no config files exist)
+   - Configuration source is displayed in the UI with visual indicators
+
+7. **Configurable Parameters**:
+   - **Clip Duration**: Set fixed duration for video clips (1-60 minutes)
+   - **Random Clip Duration**: Enable random clip lengths with customizable range
+   - **Video Probability**: Control the ratio of study vs relax videos (0-100%)
+   - **Study Video Probability**: Percentage of study videos in the feed
+   - **Relax Video Probability**: Percentage of relax videos in the feed
+
+8. **Configuration Persistence**:
+   - Settings are automatically saved to localStorage when changed
+   - Your preferences persist across app restarts
+   - Use "💾 Save Config" to download your current settings as `config.json`
+   - Place `config.json` in the app's public directory for sharing or backup
+   - Configuration status shows the source: "user preferences", "default config.json", or "default values"
+
+
 
 2. **Navigate Videos**:
    - **Mouse Wheel**: Scroll up/down to navigate between videos

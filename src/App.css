@@ -223,6 +223,28 @@
   background: linear-gradient(135deg, #1976D2, #1565C0);
 }
 
+.config-status {
+  margin-bottom: 15px;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.config-loaded {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.config-loading {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  animation: pulse 2s infinite;
+}
+
 .clear-directories-container {
   width: 100%;
   display: flex;

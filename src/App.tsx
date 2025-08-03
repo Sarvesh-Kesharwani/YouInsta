@@ -124,7 +124,9 @@ function App() {
       const savedConfig = localStorage.getItem('youinsta_config');
       if (savedConfig) {
         const config = JSON.parse(savedConfig);
-        return config.isRandomClipDurationEnabled || false;
+        if (typeof config.isRandomClipDurationEnabled === 'boolean') {
+          return config.isRandomClipDurationEnabled;
+        }
       }
     } catch (error) {
       console.error('Error loading random clip duration setting from localStorage:', error);
@@ -172,70 +174,66 @@ function App() {
     return 20; // Default 20%
   });
   
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [configSource, setConfigSource] = useState<'localStorage' | 'config.json' | 'defaults' | null>(null);
+  
   const [memorizedClipsFileHandle, setMemorizedClipsFileHandle] = useState<any>(null);
   const [watchedClipsFileHandle, setWatchedClipsFileHandle] = useState<any>(null);
 
-  // Load saved directories on app start
+  // Always load config.json and update config parameters on app start
+  useEffect(() => {
+    console.log('🔄 Loading configuration from config.json...');
+    loadConfigFromFile();
+  }, []);
+
+  // Load saved directories on app start (after config is loaded)
   useEffect(() => {
     const loadSavedDirectories = async () => {
       try {
-        // Load config first
-        await loadConfigFromFile();
-        
         const savedRelax = localStorage.getItem('youinsta_relax_dirs');
         const savedStudy = localStorage.getItem('youinsta_study_dirs');
         const savedCombined = localStorage.getItem('youinsta_combined_dir');
         const savedMemorizedClips = localStorage.getItem('youinsta_memorized_clips');
         const savedWatchedClips = localStorage.getItem('youinsta_watched_clips');
         const savedCoinData = localStorage.getItem('youinsta_coin_data');
-        
         let hasSavedDirectories = false;
-        
         if (savedRelax) {
           const parsed = JSON.parse(savedRelax);
           setRelaxDirectories(parsed);
-          
           if (parsed.length > 0) {
             hasSavedDirectories = true;
             console.log(`Found ${parsed.length} saved relax directories`);
           }
         }
-
         if (savedStudy) {
           const parsed = JSON.parse(savedStudy);
           setStudyDirectories(parsed);
-          
           if (parsed.length > 0) {
             hasSavedDirectories = true;
             console.log(`Found ${parsed.length} saved study directories`);
           }
         }
-
         if (savedCombined) {
           const parsed = JSON.parse(savedCombined);
           setCombinedDirectory(parsed);
           hasSavedDirectories = true;
           console.log('Found saved combined directory');
         }
-
         if (savedMemorizedClips) {
           const parsed = JSON.parse(savedMemorizedClips);
           setMemorizedClips(parsed);
           console.log(`Loaded ${parsed.length} memorized clips from localStorage (fallback)`);
         }
-
         if (savedWatchedClips) {
           const parsed = JSON.parse(savedWatchedClips);
           setWatchedClips(parsed);
           console.log(`Loaded ${parsed.length} watched clips from localStorage`);
         }
-
         if (savedCoinData) {
           const parsed = JSON.parse(savedCoinData);
           setCoinData(parsed);
           console.log(`Loaded coin data: ${parsed.totalCoins} total coins, ${parsed.earnedToday} earned today`);
         }
-
         // Load videos from saved directories if any exist
         if (hasSavedDirectories) {
           await loadVideosFromSavedDirectories();
@@ -244,7 +242,6 @@ function App() {
         console.error('Error loading saved directories:', error);
       }
     };
-
     loadSavedDirectories();
   }, []);
 
@@ -335,16 +332,25 @@ function App() {
     localStorage.setItem('youinsta_study_dirs', JSON.stringify(directoriesToSave));
   }, [studyDirectories]);
 
-  // Save config to localStorage whenever clip duration changes
+
+  // Save config to localStorage and update config.json whenever settings change
   useEffect(() => {
-    saveConfigToLocalStorage({ 
+    const config = { 
       clipDurationMinutes,
       isRandomClipDurationEnabled,
       randomClipDurationRange,
       studyVideoProbability,
       relaxVideoProbability
-    });
+    };
+    
+    saveConfigToLocalStorage(config);
+    
+    // Also try to update the config.json file in the public directory
+    updateConfigFile(config);
   }, [clipDurationMinutes, isRandomClipDurationEnabled, randomClipDurationRange, studyVideoProbability, relaxVideoProbability]);
+
+
+
 
   // Function to save memorized clips to a JSON file
   const saveMemorizedClipsToFile = async () => {
@@ -518,6 +524,55 @@ function App() {
 
   // Function to load config from file
   const loadConfigFromFile = async () => {
+    // First, try to load from localStorage (user preferences take priority)
+    console.log('🔄 Loading configuration from localStorage (user preferences)...');
+    try {
+      const savedConfig = localStorage.getItem('youinsta_config');
+      if (savedConfig) {
+        const config = JSON.parse(savedConfig);
+        let loadedCount = 0;
+        
+        if (config.clipDurationMinutes && typeof config.clipDurationMinutes === 'number') {
+          setClipDurationMinutes(config.clipDurationMinutes);
+          console.log(`✅ Loaded clip duration from localStorage: ${config.clipDurationMinutes} minutes`);
+          loadedCount++;
+        }
+        
+        if (config.isRandomClipDurationEnabled !== undefined) {
+          setIsRandomClipDurationEnabled(config.isRandomClipDurationEnabled);
+          console.log(`✅ Loaded random clip duration setting from localStorage: ${config.isRandomClipDurationEnabled ? 'enabled' : 'disabled'}`);
+          loadedCount++;
+        }
+        
+        if (config.randomClipDurationRange && typeof config.randomClipDurationRange.min === 'number' && typeof config.randomClipDurationRange.max === 'number') {
+          setRandomClipDurationRange(config.randomClipDurationRange);
+          console.log(`✅ Loaded random clip duration range from localStorage: ${config.randomClipDurationRange.min}-${config.randomClipDurationRange.max} minutes`);
+          loadedCount++;
+        }
+        
+        if (config.studyVideoProbability && typeof config.studyVideoProbability === 'number') {
+          setStudyVideoProbability(config.studyVideoProbability);
+          console.log(`✅ Loaded study video probability from localStorage: ${config.studyVideoProbability}%`);
+          loadedCount++;
+        }
+        
+        if (config.relaxVideoProbability && typeof config.relaxVideoProbability === 'number') {
+          setRelaxVideoProbability(config.relaxVideoProbability);
+          console.log(`✅ Loaded relax video probability from localStorage: ${config.relaxVideoProbability}%`);
+          loadedCount++;
+        }
+        
+        console.log(`🎉 Successfully loaded ${loadedCount} configuration parameters from localStorage (user preferences)`);
+        setConfigLoaded(true);
+        setConfigSource('localStorage');
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Error loading config from localStorage:', error);
+    }
+    
+    // If no localStorage config found, fallback to config.json (default configuration)
+    console.log('🔄 No user preferences found, loading default configuration from config.json...');
     try {
       const response = await fetch('/config.json');
       if (!response.ok) {
@@ -525,68 +580,48 @@ function App() {
       }
       const config = await response.json();
       
+      console.log('📋 Default config file loaded successfully:', config);
+      
+      let loadedCount = 0;
+      
       if (config.clipDurationMinutes && typeof config.clipDurationMinutes === 'number') {
         setClipDurationMinutes(config.clipDurationMinutes);
-        console.log(`Loaded clip duration from config: ${config.clipDurationMinutes} minutes`);
+        console.log(`✅ Loaded default clip duration: ${config.clipDurationMinutes} minutes`);
+        loadedCount++;
       }
       
       if (config.isRandomClipDurationEnabled !== undefined) {
         setIsRandomClipDurationEnabled(config.isRandomClipDurationEnabled);
-        console.log(`Loaded random clip duration setting: ${config.isRandomClipDurationEnabled ? 'enabled' : 'disabled'}`);
+        console.log(`✅ Loaded default random clip duration: ${config.isRandomClipDurationEnabled ? 'enabled' : 'disabled'}`);
+        loadedCount++;
       }
       
       if (config.randomClipDurationRange && typeof config.randomClipDurationRange.min === 'number' && typeof config.randomClipDurationRange.max === 'number') {
         setRandomClipDurationRange(config.randomClipDurationRange);
-        console.log(`Loaded random clip duration range: ${config.randomClipDurationRange.min}-${config.randomClipDurationRange.max} minutes`);
+        console.log(`✅ Loaded default random clip duration range: ${config.randomClipDurationRange.min}-${config.randomClipDurationRange.max} minutes`);
+        loadedCount++;
       }
       
       if (config.studyVideoProbability && typeof config.studyVideoProbability === 'number') {
         setStudyVideoProbability(config.studyVideoProbability);
-        console.log(`Loaded study video probability: ${config.studyVideoProbability}%`);
+        console.log(`✅ Loaded default study video probability: ${config.studyVideoProbability}%`);
+        loadedCount++;
       }
       
       if (config.relaxVideoProbability && typeof config.relaxVideoProbability === 'number') {
         setRelaxVideoProbability(config.relaxVideoProbability);
-        console.log(`Loaded relax video probability: ${config.relaxVideoProbability}%`);
+        console.log(`✅ Loaded default relax video probability: ${config.relaxVideoProbability}%`);
+        loadedCount++;
       }
       
-      return;
+      console.log(`🎉 Successfully loaded ${loadedCount} default configuration parameters from config.json`);
+      setConfigLoaded(true);
+      setConfigSource('config.json');
     } catch (error) {
-      console.error('Error loading config from file:', error);
-    }
-    
-    // Fallback to localStorage
-    try {
-      const savedConfig = localStorage.getItem('youinsta_config');
-      if (savedConfig) {
-        const config = JSON.parse(savedConfig);
-        if (config.clipDurationMinutes && typeof config.clipDurationMinutes === 'number') {
-          setClipDurationMinutes(config.clipDurationMinutes);
-          console.log(`Loaded clip duration from localStorage: ${config.clipDurationMinutes} minutes`);
-        }
-        
-        if (config.isRandomClipDurationEnabled !== undefined) {
-          setIsRandomClipDurationEnabled(config.isRandomClipDurationEnabled);
-          console.log(`Loaded random clip duration setting from localStorage: ${config.isRandomClipDurationEnabled ? 'enabled' : 'disabled'}`);
-        }
-        
-        if (config.randomClipDurationRange && typeof config.randomClipDurationRange.min === 'number' && typeof config.randomClipDurationRange.max === 'number') {
-          setRandomClipDurationRange(config.randomClipDurationRange);
-          console.log(`Loaded random clip duration range from localStorage: ${config.randomClipDurationRange.min}-${config.randomClipDurationRange.max} minutes`);
-        }
-        
-        if (config.studyVideoProbability && typeof config.studyVideoProbability === 'number') {
-          setStudyVideoProbability(config.studyVideoProbability);
-          console.log(`Loaded study video probability from localStorage: ${config.studyVideoProbability}%`);
-        }
-        
-        if (config.relaxVideoProbability && typeof config.relaxVideoProbability === 'number') {
-          setRelaxVideoProbability(config.relaxVideoProbability);
-          console.log(`Loaded relax video probability from localStorage: ${config.relaxVideoProbability}%`);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading config from localStorage:', error);
+      console.error('❌ Error loading config from file:', error);
+      console.log('ℹ️ Using default values for all configuration parameters');
+      setConfigLoaded(true);
+      setConfigSource('defaults');
     }
   };
 
@@ -599,22 +634,40 @@ function App() {
     relaxVideoProbability?: number;
   }) => {
     localStorage.setItem('youinsta_config', JSON.stringify(config));
-    console.log('Config saved to localStorage successfully');
+    console.log('✅ Config saved to localStorage successfully');
   };
 
-  // Function to download config file
-  const downloadConfigFile = async () => {
+  // Function to update config.json file in the public directory
+  const updateConfigFile = async (config: { 
+    clipDurationMinutes: number;
+    isRandomClipDurationEnabled?: boolean;
+    randomClipDurationRange?: { min: number; max: number };
+    studyVideoProbability?: number;
+    relaxVideoProbability?: number;
+  }) => {
     try {
-      const config = { 
-        clipDurationMinutes, 
+      // Note: In a browser environment, we can't directly write to the public directory
+      // This function is a placeholder for future server-side implementation
+      // For now, we'll just log that the config would be updated
+      console.log('🔄 Config would be updated in config.json file:', config);
+      console.log('💡 To persist config changes, use the "💾 Save Config" button to download the updated config.json file');
+    } catch (error) {
+      console.error('❌ Error updating config file:', error);
+    }
+  };
+
+  // Function to save config file (manual, on button click)
+  const saveConfigFile = async () => {
+    try {
+      const config = {
+        clipDurationMinutes,
         isRandomClipDurationEnabled,
         randomClipDurationRange,
         studyVideoProbability,
         relaxVideoProbability,
-        version: '1.0.0' 
+        version: '1.0.0'
       };
       const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-      
       const handle = await window.showSaveFilePicker({
         suggestedName: 'config.json',
         types: [{
@@ -622,14 +675,13 @@ function App() {
           accept: { 'application/json': ['.json'] }
         }]
       });
-      
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
-      
-      console.log('Config file downloaded successfully');
+      console.log('✅ Config file saved successfully with all parameters');
+      console.log('📋 Saved configuration:', config);
     } catch (error) {
-      console.error('Error downloading config file:', error);
+      console.error('❌ Error saving config file:', error);
     }
   };
 
@@ -845,10 +897,10 @@ function App() {
       addCoins(1);
       console.log('Correct answer! +1 coin');
       
-      // If the answer was correct and the clip is in watched_clips.json, add it to memorized_clips.json
+      // If the answer was correct and the clip is watched 80% or more, add it to memorized_clips.json
       if (currentClip && isClipWatched(currentClip)) {
         addToMemorized(currentClip);
-        console.log('Clip was in watched_clips.json and answer was correct - added to memorized_clips.json');
+        console.log('Clip was watched 80% or more and answer was correct - added to memorized_clips.json');
       }
     } else {
       removeCoins(1);
@@ -2142,6 +2194,17 @@ function App() {
             
             {/* Clip Duration Setting */}
             <div className="clip-duration-container">
+              <div className="config-status">
+                {configLoaded ? (
+                  <span className="config-loaded">
+                    {configSource === 'localStorage' && '✅ Config loaded from user preferences (localStorage)'}
+                    {configSource === 'config.json' && '✅ Config loaded from default config.json'}
+                    {configSource === 'defaults' && '✅ Config loaded from default values'}
+                  </span>
+                ) : (
+                  <span className="config-loading">🔄 Loading configuration...</span>
+                )}
+              </div>
               <label htmlFor="clip-duration-input" className="clip-duration-label">
                 ⏱️ Clip Duration (minutes):
               </label>
@@ -2166,10 +2229,10 @@ function App() {
               </div>
               <button 
                 className="download-config-btn"
-                onClick={downloadConfigFile}
-                title="Download current configuration as config.json"
+                onClick={saveConfigFile}
+                title="Save current configuration to config.json"
               >
-                📥 Download Config
+                � Save Config
               </button>
             </div>
             
