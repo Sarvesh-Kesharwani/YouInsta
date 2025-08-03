@@ -1738,6 +1738,11 @@ function App() {
           
           console.log(`Successfully loaded combined directory: ${relaxVideos.length + studyVideos.length} videos, ${loadedMemorizedClips.length} clips, and coin data`);
           
+          // Mark app as started when videos are loaded
+          if (relaxVideos.length > 0 || studyVideos.length > 0) {
+            setIsAppStarted(true);
+          }
+          
           // Calculate time ranges for the loaded videos
           console.log('🔄 Calculating time ranges for loaded videos...');
           const newVideoRanges = await calculateTimeRanges(relaxVideos, studyVideos);
@@ -1829,6 +1834,11 @@ function App() {
       // Update the appropriate video state
       setRelaxVideos(relaxVideos);
       setStudyVideos(studyVideos);
+      
+      // Mark app as started when videos are loaded
+      if (relaxVideos.length > 0 || studyVideos.length > 0) {
+        setIsAppStarted(true);
+      }
       
       // Calculate time ranges for the loaded videos
       if (relaxVideos.length > 0 || studyVideos.length > 0) {
@@ -2079,6 +2089,9 @@ function App() {
           console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos! 📁 (No JSON files found)`);
         }
         
+        // Mark app as started when videos are loaded
+        setIsAppStarted(true);
+        
       } catch (error) {
         console.error('Error reading directory:', error);
         throw error;
@@ -2120,17 +2133,20 @@ function App() {
         name: file.name
       }));
       
-      // Update directory list and videos
-      if (category === 'relax') {
-        setRelaxDirectories(prev => [...prev, dirInfo]);
-        setRelaxVideos(videoObjects);
-      } else {
-        setStudyDirectories(prev => [...prev, dirInfo]);
-        setStudyVideos(videoObjects);
-      }
-      
-      // Clear combined directory when using individual directories
-      setCombinedDirectory(null);
+              // Update directory list and videos
+        if (category === 'relax') {
+          setRelaxDirectories(prev => [...prev, dirInfo]);
+          setRelaxVideos(videoObjects);
+        } else {
+          setStudyDirectories(prev => [...prev, dirInfo]);
+          setStudyVideos(videoObjects);
+        }
+        
+        // Clear combined directory when using individual directories
+        setCombinedDirectory(null);
+        
+        // Mark app as started when videos are loaded
+        setIsAppStarted(true);
       
     } catch (error: any) {
       if (error.name !== 'AbortError') {
@@ -2806,6 +2822,9 @@ function App() {
           onClear={clearVideos}
           onAddMore={() => {
             setCurrentPage('upload');
+          }}
+          onBackToHome={() => {
+            setCurrentPage('home');
           }}
           markAsMemorized={markAsMemorized}
           clips={clips}

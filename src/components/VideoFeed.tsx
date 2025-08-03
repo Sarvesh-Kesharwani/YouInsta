@@ -10,8 +10,9 @@ interface VideoFeedProps {
   getPreviousClip: () => Promise<VideoFile | null>;
   getCurrentClip: () => VideoFile | null;
   getInitialClip: () => Promise<VideoFile | null>;
-  onClear: () => void;
-  onAddMore: () => void;
+  onClear?: () => void;
+  onAddMore?: () => void;
+  onBackToHome: () => void;
   markAsMemorized: (currentClip: VideoFile) => void;
   clips: ClipEntry[];
   coinData: CoinData;
@@ -29,7 +30,7 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   getNextClip, 
   getPreviousClip, 
   getInitialClip, 
-  onClear, 
+  onBackToHome,
   // markAsMemorized,
   // clips,
   coinData,
@@ -298,6 +299,15 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      {/* Back to Home Button */}
+      <button 
+        className="back-to-home-btn"
+        onClick={onBackToHome}
+        title="Back to Home"
+      >
+        ← Home
+      </button>
+
       <div className="video-container">
         {/* Coin Display */}
         <div className="coin-display" ref={coinDisplayRef}>
@@ -351,13 +361,14 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
               {isPlaying ? '⏸️' : '▶️'}
             </button>
             
-            <button 
+            {/* Clear button hidden for now */}
+            {/* <button 
               className="control-btn"
               onClick={onClear}
               title="Clear all videos"
             >
               🗑️
-            </button>
+            </button> */}
           </div>
         </div>
 
