@@ -2,14 +2,14 @@
 
 ## Upload Button Not Loading JSON File
 
-If the "📁 Upload" button is not loading the `memorized_clips.json` file, here are the most common causes and solutions:
+If the "📁 Upload" button is not loading the `clips.json` file, here are the most common causes and solutions:
 
 ### 1. No JSON File Present
-**Problem**: The `memorized_clips.json` file doesn't exist in your directory.
+**Problem**: The `clips.json` file doesn't exist in your directory.
 
 **Solution**: 
 - Use the "📝 Create Sample File" button to generate a template
-- Or use the "💾 Save to File" button after memorizing some clips
+- Or use the "💾 Save to File" button after watching some clips
 - Place the generated file in the root of your directory (same level as "relax" and "study" folders)
 
 ### 2. Incorrect File Structure
@@ -24,13 +24,13 @@ YourDirectory/
 ├── study/
 │   ├── video3.mp4
 │   └── video4.mp4
-└── memorized_clips.json
+└── clips.json
 ```
 
 **Solution**: Ensure your directory has this exact structure.
 
 ### 3. JSON File Format Issues
-**Problem**: The `memorized_clips.json` file has incorrect format.
+**Problem**: The `clips.json` file has incorrect format.
 
 **Correct Format**:
 ```json
@@ -41,6 +41,9 @@ YourDirectory/
     "startTime": 10,
     "endTime": 30,
     "category": "relax",
+    "memorized": false,
+    "watched": true,
+    "watchPercentage": 80,
     "timestamp": 1234567890
   }
 ]
@@ -58,7 +61,7 @@ YourDirectory/
 4. Look for console messages that show:
    - Selected directory name
    - Files found in the directory
-   - Whether `memorized_clips.json` was found
+   - Whether `clips.json` was found
    - Any error messages
 
 ### 5. File Permissions
@@ -74,9 +77,9 @@ YourDirectory/
 ### When Upload Works:
 ```
 Selected directory: YourDirectoryName
-Found memorized_clips.json file
+Found clips.json file
 File content length: 123
-Successfully loaded 2 memorized clips from memorized_clips.json
+Successfully loaded 2 clips from clips.json
 Found relax folder
 Found 5 video files in relax folder
 Found study folder
@@ -86,8 +89,8 @@ Found 3 video files in study folder
 ### When JSON File is Missing:
 ```
 Selected directory: YourDirectoryName
-No memorized_clips.json file found in the selected directory
-To create a memorized_clips.json file, use the "💾 Save to File" button in the Memorized Clips section
+No clips.json file found in the selected directory
+To create a clips.json file, use the "💾 Save to File" button in the Clips section
 Found relax folder
 Found 5 video files in relax folder
 ```

@@ -123,8 +123,9 @@ npm run preview
    - Save/load memorized clips to/from JSON files for persistence
 
 4. **File-based Storage**:
-   - Use "💾 Save to File" to export memorized clips as `memorized_clips.json`
+   - Use "💾 Save to File" to export clips as `clips.json`
    - Place this file in your directory root for automatic loading with "📁 Upload"
+   - The clips.json file contains all clip entries with their memorized and watched status
 
 ### Configuration Management
 

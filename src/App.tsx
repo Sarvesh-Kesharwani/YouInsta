@@ -28,32 +28,16 @@ export interface VideoTimeRange {
   endTime: number;
 }
 
-export interface MemorizedClip {
+export interface ClipEntry {
   id: string;
   videoName: string;
   startTime: number;
   endTime: number;
   category: 'relax' | 'study';
-  timestamp: number;
-}
-
-export interface WatchedClip {
-  id: string;
-  videoName: string;
-  startTime: number;
-  endTime: number;
-  category: 'relax' | 'study';
+  memorized: boolean;
+  watched: boolean;
   watchPercentage: number;
-}
-
-export interface CoinData {
-  totalCoins: number;
-  earnedToday: number;
-  date: string;
-  history: {
-    date: string;
-    coins: number;
-  }[];
+  timestamp: number;
 }
 
 export interface VideoWithRanges {
@@ -76,6 +60,16 @@ interface DirectoryInfo {
   handle?: any; // Store the directory handle for persistence
 }
 
+export interface CoinData {
+  totalCoins: number;
+  earnedToday: number;
+  date: string;
+  history: {
+    date: string;
+    coins: number;
+  }[];
+}
+
 function App() {
   const [relaxVideos, setRelaxVideos] = useState<VideoFile[]>([]);
   const [studyVideos, setStudyVideos] = useState<VideoFile[]>([]);
@@ -88,8 +82,7 @@ function App() {
     preloadedVideos: new Set()
   });
   const [isAppStarted, setIsAppStarted] = useState(false);
-  const [memorizedClips, setMemorizedClips] = useState<MemorizedClip[]>([]);
-  const [watchedClips, setWatchedClips] = useState<WatchedClip[]>([]);
+  const [clips, setClips] = useState<ClipEntry[]>([]);
   const [coinData, setCoinData] = useState<CoinData>({
     totalCoins: 0,
     earnedToday: 0,
@@ -177,8 +170,7 @@ function App() {
   const [configLoaded, setConfigLoaded] = useState(false);
   const [configSource, setConfigSource] = useState<'localStorage' | 'config.json' | 'defaults' | null>(null);
   
-  const [memorizedClipsFileHandle, setMemorizedClipsFileHandle] = useState<any>(null);
-  const [watchedClipsFileHandle, setWatchedClipsFileHandle] = useState<any>(null);
+  const [clipsFileHandle, setClipsFileHandle] = useState<any>(null);
 
   // Always load config.json and update config parameters on app start
   useEffect(() => {
@@ -193,8 +185,7 @@ function App() {
         const savedRelax = localStorage.getItem('youinsta_relax_dirs');
         const savedStudy = localStorage.getItem('youinsta_study_dirs');
         const savedCombined = localStorage.getItem('youinsta_combined_dir');
-        const savedMemorizedClips = localStorage.getItem('youinsta_memorized_clips');
-        const savedWatchedClips = localStorage.getItem('youinsta_watched_clips');
+        const savedClips = localStorage.getItem('youinsta_clips');
         const savedCoinData = localStorage.getItem('youinsta_coin_data');
         let hasSavedDirectories = false;
         if (savedRelax) {
@@ -219,15 +210,10 @@ function App() {
           hasSavedDirectories = true;
           console.log('Found saved combined directory');
         }
-        if (savedMemorizedClips) {
-          const parsed = JSON.parse(savedMemorizedClips);
-          setMemorizedClips(parsed);
-          console.log(`Loaded ${parsed.length} memorized clips from localStorage (fallback)`);
-        }
-        if (savedWatchedClips) {
-          const parsed = JSON.parse(savedWatchedClips);
-          setWatchedClips(parsed);
-          console.log(`Loaded ${parsed.length} watched clips from localStorage`);
+        if (savedClips) {
+          const parsed = JSON.parse(savedClips);
+          setClips(parsed);
+          console.log(`Loaded ${parsed.length} clips from localStorage`);
         }
         if (savedCoinData) {
           const parsed = JSON.parse(savedCoinData);
@@ -250,66 +236,28 @@ function App() {
     localStorage.setItem('youinsta_coin_data', JSON.stringify(coinData));
   }, [coinData]);
 
-  // Update memorized clips in localStorage whenever they change
+  // Update clips in localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('youinsta_memorized_clips', JSON.stringify(memorizedClips));
+    localStorage.setItem('youinsta_clips', JSON.stringify(clips));
     
     // Also save to JSON file if we have a file handle
-    if (memorizedClipsFileHandle && memorizedClips.length > 0) {
+    if (clipsFileHandle && clips.length > 0) {
       const saveToFile = async () => {
         try {
-          const writable = await memorizedClipsFileHandle.createWritable();
-          await writable.write(JSON.stringify(memorizedClips, null, 2));
+          const writable = await clipsFileHandle.createWritable();
+          await writable.write(JSON.stringify(clips, null, 2));
           await writable.close();
-          console.log('Automatically saved memorized clips to JSON file');
+          console.log('Automatically saved clips to JSON file');
         } catch (error) {
-          console.error('Error auto-saving memorized clips to file:', error);
+          console.error('Error auto-saving clips to file:', error);
           // Clear the file handle if there's an error
-          setMemorizedClipsFileHandle(null);
+          setClipsFileHandle(null);
         }
       };
       saveToFile();
     }
-  }, [memorizedClips, memorizedClipsFileHandle]);
+  }, [clips, clipsFileHandle]);
 
-  // Update watched clips in localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('youinsta_watched_clips', JSON.stringify(watchedClips));
-    
-    // Auto-save to JSON file
-    const saveToFile = async () => {
-      try {
-        let fileHandle = watchedClipsFileHandle;
-        
-        // If no file handle exists, create one automatically
-        if (!fileHandle) {
-          fileHandle = await window.showSaveFilePicker({
-            suggestedName: 'watched_clips.json',
-            types: [{
-              description: 'JSON File',
-              accept: { 'application/json': ['.json'] }
-            }]
-          });
-          setWatchedClipsFileHandle(fileHandle);
-          console.log('Created new watched clips file handle for autosave');
-        }
-        
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(watchedClips, null, 2));
-        await writable.close();
-        console.log('Automatically saved watched clips to JSON file');
-      } catch (error) {
-        console.error('Error auto-saving watched clips to file:', error);
-        // Clear the file handle if there's an error
-        setWatchedClipsFileHandle(null);
-      }
-    };
-    
-    // Only attempt to save if we have watched clips or if we have a file handle (to clear the file)
-    if (watchedClips.length > 0 || watchedClipsFileHandle) {
-      saveToFile();
-    }
-  }, [watchedClips, watchedClipsFileHandle]);
 
   // Save directories to localStorage whenever they change
   useEffect(() => {
@@ -353,15 +301,15 @@ function App() {
 
 
   // Function to save memorized clips to a JSON file
-  const saveMemorizedClipsToFile = async () => {
+  const saveClipsToFile = async () => {
     try {
-      // Create a JSON file with the memorized clips data
-      const data = JSON.stringify(memorizedClips, null, 2);
+      // Create a JSON file with the clips data
+      const data = JSON.stringify(clips, null, 2);
       const blob = new Blob([data], { type: 'application/json' });
       
       // Use the File System Access API to save the file
       const handle = await window.showSaveFilePicker({
-        suggestedName: 'youinsta_memorized_clips.json',
+        suggestedName: 'clips.json',
         types: [{
           description: 'JSON File',
           accept: { 'application/json': ['.json'] }
@@ -373,18 +321,18 @@ function App() {
       await writable.close();
       
       // Store the file handle for future automatic saves
-      setMemorizedClipsFileHandle(handle);
+      setClipsFileHandle(handle);
       
-      console.log('Memorized clips saved to file successfully');
+      console.log('Clips saved to file successfully');
     } catch (error) {
-      console.error('Error saving memorized clips to file:', error);
+      console.error('Error saving clips to file:', error);
       // Fallback to localStorage if file saving fails
-      localStorage.setItem('youinsta_memorized_clips', JSON.stringify(memorizedClips));
+      localStorage.setItem('youinsta_clips', JSON.stringify(clips));
     }
   };
 
-  // Function to load memorized clips from file
-  const loadMemorizedClipsFromFile = async () => {
+  // Function to load clips from file
+  const loadClipsFromFile = async () => {
     try {
       const [fileHandle] = await window.showOpenFilePicker({
         types: [{
@@ -399,34 +347,37 @@ function App() {
       const loadedClips = JSON.parse(content);
       
       if (Array.isArray(loadedClips)) {
-        setMemorizedClips(loadedClips);
+        setClips(loadedClips);
         // Store the file handle for future automatic saves
-        setMemorizedClipsFileHandle(fileHandle);
-        console.log(`Loaded ${loadedClips.length} memorized clips from file`);
+        setClipsFileHandle(fileHandle);
+        console.log(`Loaded ${loadedClips.length} clips from file`);
       } else {
         throw new Error('Invalid file format');
       }
     } catch (error) {
-      console.error('Error loading memorized clips from file:', error);
+      console.error('Error loading clips from file:', error);
     }
   };
 
-  // Function to create a sample memorized_clips.json file
-  const createSampleMemorizedClipsFile = async () => {
+  // Function to create a sample clips.json file
+  const createSampleClipsFile = async () => {
     try {
-      const sampleClips: MemorizedClip[] = [
+      const sampleClips: ClipEntry[] = [
         {
           id: 'sample1',
           videoName: 'sample_video.mp4',
           startTime: 10,
           endTime: 30,
           category: 'relax',
+          memorized: false,
+          watched: true,
+          watchPercentage: 85,
           timestamp: Date.now()
         }
       ];
       
       const handle = await window.showSaveFilePicker({
-        suggestedName: 'memorized_clips.json',
+        suggestedName: 'clips.json',
         types: [{
           description: 'JSON File',
           accept: { 'application/json': ['.json'] }
@@ -438,7 +389,7 @@ function App() {
       await writable.write(blob);
       await writable.close();
       
-      console.log('Sample memorized_clips.json file created successfully');
+      console.log('Sample clips.json file created successfully');
     } catch (error) {
       console.error('Error creating sample file:', error);
     }
@@ -686,96 +637,13 @@ function App() {
   };
 
   // Function to save watched clips to file
-  const saveWatchedClipsToFile = async () => {
-    try {
-      const data = JSON.stringify(watchedClips, null, 2);
-      const blob = new Blob([data], { type: 'application/json' });
-      
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'youinsta_watched_clips.json',
-        types: [{
-          description: 'JSON File',
-          accept: { 'application/json': ['.json'] }
-        }]
-      });
-      
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      
-      setWatchedClipsFileHandle(handle);
-      
-      console.log('Watched clips saved to file successfully!');
-    } catch (error) {
-      console.error('Error saving watched clips to file:', error);
-    }
-  };
 
-  // Function to load watched clips from file
-  const loadWatchedClipsFromFile = async () => {
-    try {
-      const [fileHandle] = await window.showOpenFilePicker({
-        types: [{
-          description: 'JSON Files',
-          accept: { 'application/json': ['.json'] }
-        }],
-        multiple: false
-      });
-
-      const file = await fileHandle.getFile();
-      const content = await file.text();
-      const parsedClips = JSON.parse(content);
-
-      if (Array.isArray(parsedClips)) {
-        setWatchedClips(parsedClips);
-        setWatchedClipsFileHandle(fileHandle);
-        console.log(`Loaded ${parsedClips.length} watched clips from file`);
-      } else {
-        console.warn('File does not contain valid watched clips array');
-      }
-    } catch (error) {
-      console.error('Error loading watched clips from file:', error);
-    }
-  };
-
-  // Function to create a sample watched_clips.json file
-  const createSampleWatchedClipsFile = async () => {
-    try {
-      const sampleClips: WatchedClip[] = [
-        {
-          id: 'sample1',
-          videoName: 'sample_video.mp4',
-          startTime: 10,
-          endTime: 30,
-          category: 'relax',
-          watchPercentage: 85
-        }
-      ];
-      
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'watched_clips.json',
-        types: [{
-          description: 'JSON File',
-          accept: { 'application/json': ['.json'] }
-        }]
-      });
-      
-      const blob = new Blob([JSON.stringify(sampleClips, null, 2)], { type: 'application/json' });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      
-      console.log('Sample watched_clips.json file created successfully');
-    } catch (error) {
-      console.error('Error creating sample file:', error);
-    }
-  };
 
   // Track which clips have been processed for 80% threshold in this session
   const [processedClipsFor80Percent, setProcessedClipsFor80Percent] = useState<Set<string>>(new Set());
 
-  // Function to add a clip to watched clips
-  const addToWatchedClips = (currentClip: VideoFile, watchPercentage: number) => {
+  // Function to add or update a clip in the clips array
+  const addToClips = (currentClip: VideoFile, watchPercentage: number) => {
     if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
       console.log('Skipping non-clip or invalid clip');
       return;
@@ -796,8 +664,8 @@ function App() {
       return;
     }
 
-    // Check if clip is already in watched list
-    const existingClip = watchedClips.find(clip =>
+    // Check if clip already exists in clips array
+    const existingClip = clips.find(clip =>
       clip.videoName === videoWithRanges.video.name &&
       clip.startTime === currentClip.startTime &&
       clip.endTime === currentClip.endTime
@@ -814,9 +682,9 @@ function App() {
       
       // Only update if the new percentage is higher and less than 80%
       if (watchPercentage > existingClip.watchPercentage && watchPercentage < 80) {
-        setWatchedClips(prev => prev.map(clip =>
+        setClips(prev => prev.map(clip =>
           clip.id === existingClip.id
-            ? { ...clip, watchPercentage }
+            ? { ...clip, watchPercentage, watched: watchPercentage >= 80 }
             : clip
         ));
         console.log(`Updated watch percentage for existing clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) from ${existingClip.watchPercentage}% to ${watchPercentage}%`);
@@ -824,18 +692,21 @@ function App() {
         console.log(`Clip already exists with higher or equal watch percentage: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}%, new: ${watchPercentage}%`);
       }
     } else {
-      // Add new watched clip
-      const watchedClip: WatchedClip = {
+      // Add new clip entry
+      const newClip: ClipEntry = {
         id: Math.random().toString(36).substr(2, 9),
         videoName: videoWithRanges.video.name,
         startTime: currentClip.startTime,
         endTime: currentClip.endTime,
         category: videoWithRanges.category,
-        watchPercentage
+        memorized: false,
+        watched: watchPercentage >= 80,
+        watchPercentage,
+        timestamp: Date.now()
       };
 
-      setWatchedClips(prev => [...prev, watchedClip]);
-      console.log(`Added new clip to watched: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
+      setClips(prev => [...prev, newClip]);
+      console.log(`Added new clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
     }
 
     // Mark this clip as processed for 80% in this session
@@ -855,13 +726,13 @@ function App() {
       return false;
     }
 
-    const watchedClip = watchedClips.find(clip =>
+    const clipEntry = clips.find(clip =>
       clip.videoName === videoWithRanges.video.name &&
       clip.startTime === currentClip.startTime &&
       clip.endTime === currentClip.endTime
     );
 
-    return watchedClip ? watchedClip.watchPercentage >= 80 : false;
+    return clipEntry ? clipEntry.watchPercentage >= 80 : false;
   };
 
   // Function to check if a clip range overlaps with a watched clip (80% or more overlap)
@@ -879,11 +750,11 @@ function App() {
 
     const currentClipDuration = currentClip.endTime - currentClip.startTime;
     
-    return watchedClips.some(watchedClip => {
-      if (watchedClip.videoName !== videoWithRanges.video.name) return false;
+    return clips.some(clipEntry => {
+      if (clipEntry.videoName !== videoWithRanges.video.name) return false;
       
-      const overlapStart = Math.max(currentClip.startTime!, watchedClip.startTime);
-      const overlapEnd = Math.min(currentClip.endTime!, watchedClip.endTime);
+      const overlapStart = Math.max(currentClip.startTime!, clipEntry.startTime);
+      const overlapEnd = Math.min(currentClip.endTime!, clipEntry.endTime);
       const overlapDuration = Math.max(0, overlapEnd - overlapStart);
       
       const overlapPercentage = (overlapDuration / currentClipDuration) * 100;
@@ -897,10 +768,10 @@ function App() {
       addCoins(1);
       console.log('Correct answer! +1 coin');
       
-      // If the answer was correct and the clip is watched 80% or more, add it to memorized_clips.json
+      // If the answer was correct and the clip is watched 80% or more, mark it as memorized
       if (currentClip && isClipWatched(currentClip)) {
-        addToMemorized(currentClip);
-        console.log('Clip was watched 80% or more and answer was correct - added to memorized_clips.json');
+        markAsMemorized(currentClip);
+        console.log('Clip was watched 80% or more and answer was correct - marked as memorized');
       }
     } else {
       removeCoins(1);
@@ -979,14 +850,21 @@ function App() {
       return false;
     }
     
-    const isMemorized = memorizedClips.some(clip => 
-      clip.videoName === currentClip.name &&
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === currentClip.id.split('_clip_')[0]);
+    if (!videoWithRanges) {
+      return false;
+    }
+    
+    const clipEntry = clips.find(clip => 
+      clip.videoName === videoWithRanges.video.name &&
       clip.startTime === currentClip.startTime &&
       clip.endTime === currentClip.endTime
     );
     
+    const isMemorized = clipEntry ? clipEntry.memorized : false;
+    
     if (isMemorized) {
-      console.log(`Clip is already memorized: ${currentClip.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
+      console.log(`Clip is already memorized: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
     }
     
     return isMemorized;
@@ -997,70 +875,68 @@ function App() {
 
 
 
-  // Function to add or remove from memorized (toggle functionality)
-  const addToMemorized = (currentClip: VideoFile) => {
+  // Function to mark a clip as memorized or remove from memorized (toggle functionality)
+  const markAsMemorized = (currentClip: VideoFile) => {
     if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
       return; // Silently return without popup
     }
 
-    // Check if clip is already memorized
-    const isAlreadyMemorized = isClipMemorized(currentClip);
-    
-    if (isAlreadyMemorized) {
-      // Remove from memorized
-      const clipToRemove = memorizedClips.find(clip => 
-        clip.videoName === currentClip.name &&
-        clip.startTime === currentClip.startTime &&
-        clip.endTime === currentClip.endTime
-      );
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === currentClip.id.split('_clip_')[0]);
+    if (!videoWithRanges) {
+      return; // Silently return without popup
+    }
+
+    // Check if clip already exists in clips array
+    const existingClip = clips.find(clip => 
+      clip.videoName === videoWithRanges.video.name &&
+      clip.startTime === currentClip.startTime &&
+      clip.endTime === currentClip.endTime
+    );
+
+    if (existingClip) {
+      // Toggle memorized status
+      const newMemorizedStatus = !existingClip.memorized;
+      setClips(prev => prev.map(clip =>
+        clip.id === existingClip.id
+          ? { ...clip, memorized: newMemorizedStatus }
+          : clip
+      ));
       
-      if (clipToRemove) {
-        setMemorizedClips(prev => prev.filter(clip => clip.id !== clipToRemove.id));
+      if (newMemorizedStatus) {
+        addCoins(1); // Add 1 coin
+        console.log(`Marked clip as memorized: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
+      } else {
         removeCoins(1); // Remove 1 coin
-        console.log(`Removed clip from memorized: ${currentClip.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
+        console.log(`Removed clip from memorized: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
       }
     } else {
-      // Add to memorized - Check for duplicates before adding
-      const videoWithRanges = videoRanges.find(vr => vr.video.id === currentClip.id.split('_clip_')[0]);
-      if (!videoWithRanges) {
-        return; // Silently return without popup
-      }
-
-      // Explicit duplicate check before adding
-      const existingClip = memorizedClips.find(clip => 
-        clip.videoName === videoWithRanges.video.name &&
-        clip.startTime === currentClip.startTime &&
-        clip.endTime === currentClip.endTime
-      );
-
-      if (existingClip) {
-        console.log(`Clip already exists in memorized list: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
-        return; // Don't add duplicate
-      }
-
-      const memorizedClip: MemorizedClip = {
+      // Add new clip entry as memorized
+      const newClip: ClipEntry = {
         id: Math.random().toString(36).substr(2, 9),
         videoName: videoWithRanges.video.name,
         startTime: currentClip.startTime,
         endTime: currentClip.endTime,
         category: videoWithRanges.category,
+        memorized: true,
+        watched: false,
+        watchPercentage: 0,
         timestamp: Date.now()
       };
 
-      setMemorizedClips(prev => [...prev, memorizedClip]);
+      setClips(prev => [...prev, newClip]);
       addCoins(1); // Add 1 coin
-      console.log(`Added clip to memorized: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
+      console.log(`Added clip as memorized: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
     }
   };
 
-  // Function to remove a clip from memorized list
-  const removeFromMemorized = (clipId: string) => {
-    setMemorizedClips(prev => prev.filter(clip => clip.id !== clipId));
+  // Function to remove a clip from clips list
+  const removeClip = (clipId: string) => {
+    setClips(prev => prev.filter(clip => clip.id !== clipId));
   };
 
-  // Function to clear all memorized clips
-  const clearMemorizedClips = () => {
-    setMemorizedClips([]);
+  // Function to clear all clips
+  const clearClips = () => {
+    setClips([]);
   };
 
   // Function to recursively find all video files in a directory
@@ -1088,56 +964,57 @@ function App() {
   };
 
   // Function to load videos from combined directory (relax and study folders)
-  const loadVideosFromCombinedDirectory = async (dirInfo: DirectoryInfo) => {
-    setIsLoadingDirectories(true);
-    
-    try {
-      // For saved directories, we need to prompt the user to reselect
-      const dirHandle = await window.showDirectoryPicker({
-        startIn: dirInfo.path
-      });
-      
-      const relaxVideos: VideoFile[] = [];
-      const studyVideos: VideoFile[] = [];
-      
-      // Look for relax and study folders
-      for await (const entry of dirHandle.values()) {
-        if (entry.kind === 'directory') {
-          if (entry.name.toLowerCase() === 'relax') {
-            const relaxFiles = await findVideosInDirectory(entry);
-            const relaxVideoObjects: VideoFile[] = relaxFiles.map(file => ({
-              id: Math.random().toString(36).substr(2, 9),
-              file,
-              url: URL.createObjectURL(file),
-              name: file.name
-            }));
-            relaxVideos.push(...relaxVideoObjects);
-          } else if (entry.name.toLowerCase() === 'study') {
-            const studyFiles = await findVideosInDirectory(entry);
-            const studyVideoObjects: VideoFile[] = studyFiles.map(file => ({
-              id: Math.random().toString(36).substr(2, 9),
-              file,
-              url: URL.createObjectURL(file),
-              name: file.name
-            }));
-            studyVideos.push(...studyVideoObjects);
-          }
-        }
-      }
-      
-      setRelaxVideos(relaxVideos);
-      setStudyVideos(studyVideos);
-      
-      // Update directory info
-      const updatedDirInfo = { ...dirInfo, handle: dirHandle, lastSelected: Date.now() };
-      setCombinedDirectory(updatedDirInfo);
-      
-    } catch (error) {
-      console.error('Error loading combined directory:', error);
-    } finally {
-      setIsLoadingDirectories(false);
-    }
-  };
+  // Note: This function is currently unused but kept for future functionality
+  // const loadVideosFromCombinedDirectory = async (dirInfo: DirectoryInfo) => {
+  //   setIsLoadingDirectories(true);
+  //   
+  //   try {
+  //     // For saved directories, we need to prompt the user to reselect
+  //     const dirHandle = await window.showDirectoryPicker({
+  //       startIn: dirInfo.path
+  //     });
+  //     
+  //     const relaxVideos: VideoFile[] = [];
+  //     const studyVideos: VideoFile[] = [];
+  //     
+  //     // Look for relax and study folders
+  //     for await (const entry of dirHandle.values()) {
+  //       if (entry.kind === 'directory') {
+  //         if (entry.name.toLowerCase() === 'relax') {
+  //           const relaxFiles = await findVideosInDirectory(entry);
+  //           const relaxVideoObjects: VideoFile[] = relaxFiles.map(file => ({
+  //             id: Math.random().toString(36).substr(2, 9),
+  //             file,
+  //             url: URL.createObjectURL(file),
+  //             name: file.name
+  //           }));
+  //           relaxVideos.push(...relaxVideoObjects);
+  //         } else if (entry.name.toLowerCase() === 'study') {
+  //           const studyFiles = await findVideosInDirectory(entry);
+  //           const studyVideoObjects: VideoFile[] = studyFiles.map(file => ({
+  //             id: Math.random().toString(36).substr(2, 9),
+  //             file,
+  //             url: URL.createObjectURL(file),
+  //             name: file.name
+  //           }));
+  //           studyVideos.push(...studyVideoObjects);
+  //         }
+  //       }
+  //     }
+  //     
+  //     setRelaxVideos(relaxVideos);
+  //     setStudyVideos(studyVideos);
+  //     
+  //     // Update directory info
+  //     const updatedDirInfo = { ...dirInfo, handle: dirHandle, lastSelected: Date.now() };
+  //     setCombinedDirectory(updatedDirInfo);
+  //     
+  //   } catch (error) {
+  //     console.error('Error loading combined directory:', error);
+  //   } finally {
+  //     setIsLoadingDirectories(false);
+  //   }
+  // };
 
   // Function to load videos from saved directories (for app restart)
   const loadVideosFromSavedDirectories = async () => {
@@ -1226,74 +1103,75 @@ function App() {
   };
 
   // Function to load videos from newly selected directories
-  const loadVideosFromDirectories = async (directories: DirectoryInfo[], category: 'relax' | 'study') => {
-    setIsLoadingDirectories(true);
-    
-    try {
-      const allVideos: VideoFile[] = [];
-      
-      for (const dirInfo of directories) {
-        try {
-          // Try to get the directory handle
-          const dirHandle = await window.showDirectoryPicker({
-            startIn: dirInfo.path
-          });
-          
-          // Find all videos in this directory
-          const videoFiles = await findVideosInDirectory(dirHandle);
-          
-          // Convert to VideoFile objects
-          const videoObjects: VideoFile[] = videoFiles.map(file => ({
-            id: Math.random().toString(36).substr(2, 9),
-            file,
-            url: URL.createObjectURL(file),
-            name: file.name
-          }));
-          
-          allVideos.push(...videoObjects);
-          
-          // Update directory info
-          const updatedDirInfo = { ...dirInfo, lastSelected: Date.now() };
-          if (category === 'relax') {
-            setRelaxDirectories(prev => 
-              prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
-            );
-          } else {
-            setStudyDirectories(prev => 
-              prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
-            );
-          }
-          
-        } catch (error) {
-          console.error(`Error loading directory ${dirInfo.path}:`, error);
-          // Remove the problematic directory
-          if (category === 'relax') {
-            setRelaxDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
-          } else {
-            setStudyDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
-          }
-        }
-      }
-      
-      // Update the appropriate video state
-      if (category === 'relax') {
-        setRelaxVideos(allVideos);
-      } else {
-        setStudyVideos(allVideos);
-      }
-      
-    } catch (error) {
-      console.error('Error loading videos from directories:', error);
-    } finally {
-      setIsLoadingDirectories(false);
-    }
-  };
+  // Note: This function is currently unused but kept for future functionality
+  // const loadVideosFromDirectories = async (directories: DirectoryInfo[], category: 'relax' | 'study') => {
+  //   setIsLoadingDirectories(true);
+  //   
+  //   try {
+  //     const allVideos: VideoFile[] = [];
+  //     
+  //     for (const dirInfo of directories) {
+  //       try {
+  //         // Try to get the directory handle
+  //         const dirHandle = await window.showDirectoryPicker({
+  //           startIn: dirInfo.path
+  //         });
+  //         
+  //         // Find all videos in this directory
+  //         const videoFiles = await findVideosInDirectory(dirHandle);
+  //         
+  //         // Convert to VideoFile objects
+  //         const videoObjects: VideoFile[] = videoFiles.map(file => ({
+  //           id: Math.random().toString(36).substr(2, 9),
+  //           file,
+  //           url: URL.createObjectURL(file),
+  //           name: file.name
+  //         }));
+  //         
+  //         allVideos.push(...videoObjects);
+  //         
+  //         // Update directory info
+  //         const updatedDirInfo = { ...dirInfo, lastSelected: Date.now() };
+  //         if (category === 'relax') {
+  //           setRelaxDirectories(prev => 
+  //             prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
+  //           );
+  //         } else {
+  //           setStudyDirectories(prev => 
+  //             prev.map(d => d.path === dirInfo.path ? updatedDirInfo : d)
+  //           );
+  //         }
+  //         
+  //       } catch (error) {
+  //         console.error(`Error loading directory ${dirInfo.path}:`, error);
+  //         // Remove the problematic directory
+  //         if (category === 'relax') {
+  //           setRelaxDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
+  //         } else {
+  //           setStudyDirectories(prev => prev.filter(d => d.path !== dirInfo.path));
+  //         }
+  //       }
+  //     }
+  //     
+  //     // Update the appropriate video state
+  //     if (category === 'relax') {
+  //         setRelaxVideos(allVideos);
+  //       } else {
+  //         setStudyVideos(allVideos);
+  //       }
+  //     
+  //   } catch (error) {
+  //     console.error('Error loading videos from directories:', error);
+  //   } finally {
+  //     setIsLoadingDirectories(false);
+  //   }
+  // };
 
   // Function to select a combined directory (with relax and study folders) and load memorized clips
   const selectCombinedDirectory = async () => {
     try {
       // First, try to load memorized clips and coin data from JSON files in the selected directory
-      let loadedMemorizedClips: MemorizedClip[] = [];
+      let loadedMemorizedClips: ClipEntry[] = [];
       let loadedCoinData: CoinData | null = null;
       
       try {
@@ -1308,9 +1186,9 @@ function App() {
           console.log('Checking entry:', entry.name, 'kind:', entry.kind);
           
           if (entry.kind === 'file') {
-            if (entry.name.toLowerCase() === 'memorized_clips.json') {
+            if (entry.name.toLowerCase() === 'clips.json') {
               memorizedFileFound = true;
-              console.log('Found memorized_clips.json file');
+              console.log('Found clips.json file');
               try {
                 const file = await entry.getFile();
                 const content = await file.text();
@@ -1320,13 +1198,13 @@ function App() {
                 if (Array.isArray(parsedClips)) {
                   loadedMemorizedClips = parsedClips;
                   // Store the file handle for automatic saves
-                  setMemorizedClipsFileHandle(entry);
-                  console.log(`Successfully loaded ${parsedClips.length} memorized clips from ${entry.name} and set up automatic saving`);
+                  setClipsFileHandle(entry);
+                  console.log(`Successfully loaded ${parsedClips.length} clips from ${entry.name} and set up automatic saving`);
                 } else {
-                  console.warn('memorized_clips.json does not contain an array');
+                  console.warn('clips.json does not contain an array');
                 }
               } catch (error) {
-                console.warn('Could not parse memorized_clips.json file:', error);
+                console.warn('Could not parse clips.json file:', error);
               }
             } else if (entry.name.toLowerCase() === 'coins_earned.json') {
               coinFileFound = true;
@@ -1351,19 +1229,19 @@ function App() {
         }
         
         if (!memorizedFileFound) {
-          console.log('No memorized_clips.json file found in the selected directory');
-          console.log('To create a memorized_clips.json file, use the "💾 Save to File" button in the Memorized Clips section');
+          console.log('No clips.json file found in the selected directory');
+          console.log('To create a clips.json file, use the "💾 Save to File" button in the Clips section');
           
-          // Try to create a new memorized_clips.json file in the selected directory
+          // Try to create a new clips.json file in the selected directory
           try {
-            const newMemorizedFileHandle = await dirHandle.getFileHandle('memorized_clips.json', { create: true });
-            const writable = await newMemorizedFileHandle.createWritable();
+            const newClipsFileHandle = await dirHandle.getFileHandle('clips.json', { create: true });
+            const writable = await newClipsFileHandle.createWritable();
             await writable.write(JSON.stringify([], null, 2));
             await writable.close();
-            setMemorizedClipsFileHandle(newMemorizedFileHandle);
-            console.log('Created new memorized_clips.json file in the selected directory for automatic saves');
+            setClipsFileHandle(newClipsFileHandle);
+            console.log('Created new clips.json file in the selected directory for automatic saves');
           } catch (error) {
-            console.log('Could not create memorized_clips.json file (will need manual save)');
+            console.log('Could not create clips.json file (will need manual save)');
           }
         }
         
@@ -1433,18 +1311,18 @@ function App() {
         setRelaxVideos(relaxVideos);
         setStudyVideos(studyVideos);
         
-        // Load memorized clips and coin data if found
+        // Load clips and coin data if found
         if (loadedMemorizedClips.length > 0) {
-          setMemorizedClips(loadedMemorizedClips);
+          setClips(loadedMemorizedClips);
           // Try to get the file handle for future automatic saves
           try {
-            const memorizedFileHandle = await dirHandle.getFileHandle('memorized_clips.json');
-            setMemorizedClipsFileHandle(memorizedFileHandle);
-            console.log('Stored memorized_clips.json file handle for automatic saves');
+            const clipsFileHandle = await dirHandle.getFileHandle('clips.json');
+            setClipsFileHandle(clipsFileHandle);
+            console.log('Stored clips.json file handle for automatic saves');
           } catch (error) {
-            console.log('Could not get file handle for memorized_clips.json (will need manual save)');
+            console.log('Could not get file handle for clips.json (will need manual save)');
           }
-          console.log(`Successfully loaded ${loadedMemorizedClips.length} memorized clips`);
+          console.log(`Successfully loaded ${loadedMemorizedClips.length} clips`);
         }
         
         if (loadedCoinData) {
@@ -1558,11 +1436,12 @@ function App() {
   };
 
   // Helper function to unload video from memory
-  const unloadVideo = (videoFile: VideoFile) => {
-    console.log(`Unloading video from memory: ${videoFile.name}`);
-    // Don't revoke the URL as it's still needed by clips
-    // The browser will handle memory cleanup automatically
-  };
+  // Note: This function is currently unused but kept for future functionality
+  // const unloadVideo = (videoFile: VideoFile) => {
+  //   console.log(`Unloading video from memory: ${videoFile.name}`);
+  //   // Don't revoke the URL as it's still needed by clips
+  //   // The browser will handle memory cleanup automatically
+  // };
 
   // Function to manage video memory - keep only 7 clips worth of videos in memory
   const manageVideoMemory = async (newQueue: VideoFile[], currentIndex: number) => {
@@ -1927,7 +1806,7 @@ function App() {
     // Use configurable probabilities for study vs relax videos
     const random = Math.random();
     const studyProbability = studyVideoProbability / 100; // Convert percentage to decimal
-    const relaxProbability = relaxVideoProbability / 100; // Convert percentage to decimal
+    // const relaxProbability = relaxVideoProbability / 100; // Convert percentage to decimal
     
     if (random < studyProbability && studyVideos.length > 0) {
       // Pick a random study video
@@ -1947,10 +1826,11 @@ function App() {
     
     // Filter out time ranges that are already memorized
     const availableRanges = selectedVideoRange.timeRanges.filter(range => {
-      return !memorizedClips.some(memorizedClip => 
-        memorizedClip.videoName === selectedVideoRange.video.name &&
-        memorizedClip.startTime === range.startTime &&
-        memorizedClip.endTime === range.endTime
+      return !clips.some(clipEntry => 
+        clipEntry.videoName === selectedVideoRange.video.name &&
+        clipEntry.startTime === range.startTime &&
+        clipEntry.endTime === range.endTime &&
+        clipEntry.memorized
       );
     });
     
@@ -1960,10 +1840,11 @@ function App() {
       const allVideos = [...studyVideos, ...relaxVideos];
       for (const videoRange of allVideos) {
         const availableRangesForVideo = videoRange.timeRanges.filter(range => {
-          return !memorizedClips.some(memorizedClip => 
-            memorizedClip.videoName === videoRange.video.name &&
-            memorizedClip.startTime === range.startTime &&
-            memorizedClip.endTime === range.endTime
+          return !clips.some(clipEntry => 
+            clipEntry.videoName === videoRange.video.name &&
+            clipEntry.startTime === range.startTime &&
+            clipEntry.endTime === range.endTime &&
+            clipEntry.memorized
           );
         });
         
@@ -2381,39 +2262,39 @@ function App() {
             </div>
           </div>
           
-          {/* Memorized Clips Section */}
-          <div className="memorized-section">
-            <h2>🧠 Memorized Clips</h2>
+          {/* Clips Section */}
+          <div className="clips-section">
+            <h2>📋 All Clips</h2>
             
             {/* File Management Buttons */}
-            <div className="memorized-file-buttons">
+            <div className="clips-file-buttons">
               <button 
-                className="load-memorized-btn"
-                onClick={loadMemorizedClipsFromFile}
-                title="Load memorized clips from file"
+                className="load-clips-btn"
+                onClick={loadClipsFromFile}
+                title="Load clips from file"
               >
                 📂 Load from File
               </button>
               <button 
-                className="save-memorized-btn"
-                onClick={saveMemorizedClipsToFile}
-                title="Save memorized clips to file"
+                className="save-clips-btn"
+                onClick={saveClipsToFile}
+                title="Save clips to file"
               >
                 💾 Save to File
               </button>
               <button 
                 className="create-sample-btn"
-                onClick={createSampleMemorizedClipsFile}
-                title="Create a sample memorized_clips.json file"
+                onClick={createSampleClipsFile}
+                title="Create a sample clips.json file"
               >
                 📝 Create Sample File
               </button>
             </div>
             
-            {memorizedClips.length > 0 ? (
-              <div className="memorized-clips-list">
-                {memorizedClips.map((clip) => (
-                  <div key={clip.id} className="memorized-clip-item">
+            {clips.length > 0 ? (
+              <div className="clips-list">
+                {clips.map((clip) => (
+                  <div key={clip.id} className="clip-item">
                     <div className="clip-info">
                       <span className="clip-name">{clip.videoName}</span>
                       <span className="clip-time">
@@ -2421,75 +2302,29 @@ function App() {
                         {Math.floor(clip.endTime / 60)}:{(clip.endTime % 60).toString().padStart(2, '0')}
                       </span>
                       <span className="clip-category">{clip.category}</span>
+                      <span className="clip-status">
+                        {clip.memorized ? '🧠 Memorized' : '❌ Not Memorized'} | 
+                        {clip.watched ? ` 👁️ Watched (${clip.watchPercentage}%)` : ' 👁️ Not Watched'}
+                      </span>
                     </div>
                     <button 
                       className="remove-clip-btn"
-                      onClick={() => removeFromMemorized(clip.id)}
-                      title="Remove from memorized"
+                      onClick={() => removeClip(clip.id)}
+                      title="Remove clip"
                     >
                       ❌
                     </button>
                   </div>
                 ))}
                 <button 
-                  className="clear-memorized-btn"
-                  onClick={clearMemorizedClips}
+                  className="clear-clips-btn"
+                  onClick={clearClips}
                 >
-                  🗑️ Clear All Memorized Clips
+                  🗑️ Clear All Clips
                 </button>
               </div>
             ) : (
-              <p className="no-memorized">No clips memorized yet. Start the app and use the 🧠 button to memorize clips!</p>
-            )}
-          </div>
-
-          {/* Watched Clips Section */}
-          <div className="watched-section">
-            <h2>👁️ Watched Clips</h2>
-            
-            {/* File Management Buttons */}
-            <div className="watched-file-buttons">
-              <button 
-                className="load-watched-btn"
-                onClick={loadWatchedClipsFromFile}
-                title="Load watched clips from file"
-              >
-                📂 Load from File
-              </button>
-              <button 
-                className="save-watched-btn"
-                onClick={saveWatchedClipsToFile}
-                title="Save watched clips to file"
-              >
-                💾 Save to File
-              </button>
-              <button 
-                className="create-watched-sample-btn"
-                onClick={createSampleWatchedClipsFile}
-                title="Create a sample watched_clips.json file"
-              >
-                📝 Create Sample File
-              </button>
-            </div>
-            
-            {watchedClips.length > 0 ? (
-              <div className="watched-clips-list">
-                {watchedClips.map((clip) => (
-                  <div key={clip.id} className="watched-clip-item">
-                    <div className="clip-info">
-                      <span className="clip-name">{clip.videoName}</span>
-                      <span className="clip-time">
-                        {Math.floor(clip.startTime / 60)}:{(clip.startTime % 60).toString().padStart(2, '0')} - 
-                        {Math.floor(clip.endTime / 60)}:{(clip.endTime % 60).toString().padStart(2, '0')}
-                      </span>
-                      <span className="clip-category">{clip.category}</span>
-                      <span className="watch-percentage">Watched: {clip.watchPercentage}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="no-watched">No clips watched yet. Start the app and watch clips to 80% or more to track them!</p>
+              <p className="no-clips">No clips yet. Start the app and clips will be added as you watch them!</p>
             )}
           </div>
 
@@ -2516,15 +2351,15 @@ function App() {
             // Go back to home screen to add more videos
             setIsAppStarted(false);
           }}
-          addToMemorized={addToMemorized}
-          removeFromMemorized={removeFromMemorized}
-          memorizedClips={memorizedClips}
+          markAsMemorized={markAsMemorized}
+          clips={clips}
           coinData={coinData}
           isClipMemorized={isClipMemorized}
-          addToWatchedClips={addToWatchedClips}
+          addToClips={addToClips}
           hasOverlappingWatchedClip={hasOverlappingWatchedClip}
           onQuizAnswer={handleQuizAnswer}
           onVideoChange={clearProcessedClipsFor80Percent}
+          processedClipsFor80Percent={processedClipsFor80Percent}
         />
       )}
     </div>
