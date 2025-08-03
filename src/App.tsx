@@ -1168,6 +1168,9 @@ function App() {
     return clips.some(clipEntry => {
       if (clipEntry.videoName !== videoWithRanges.video.name) return false;
       
+      // Check if this clip entry was actually watched (80% or more)
+      if (clipEntry.watchPercentage < 80) return false;
+      
       const overlapStart = Math.max(currentClip.startTime!, clipEntry.startTime);
       const overlapEnd = Math.min(currentClip.endTime!, clipEntry.endTime);
       const overlapDuration = Math.max(0, overlapEnd - overlapStart);
@@ -1183,7 +1186,12 @@ function App() {
     console.log('💰 Current coin data before:', coinData);
     
     try {
+      // Check if the user has watched this clip before (or an overlapping clip)
+      const hasWatchedBefore = currentClip ? hasOverlappingWatchedClip(currentClip) : false;
+      console.log('👁️ Has watched this clip before:', hasWatchedBefore);
+      
       if (isCorrect) {
+        // Add coin if the answer is correct
         addCoins(1);
         console.log('✅ Correct answer! +1 coin added');
         
@@ -1191,13 +1199,14 @@ function App() {
         if (currentClip) {
           updateClipQuizStatus(currentClip, 'passed');
           
-          // If the answer was correct and the clip is watched 80% or more, mark it as memorized
+          // If the answer was correct and the clip is currently being watched 80% or more, mark it as memorized
           if (isClipWatched(currentClip)) {
             markAsMemorized(currentClip);
             console.log('🧠 Clip was watched 80% or more and answer was correct - marked as memorized');
           }
         }
       } else {
+        // Remove coin if the answer is incorrect
         removeCoins(1);
         console.log('❌ Incorrect answer! -1 coin removed');
         
@@ -1429,8 +1438,124 @@ function App() {
   };
 
   // Function to clear all clips
-  const clearClips = () => {
-    setClips([]);
+  const clearClips = async () => {
+    try {
+      // Clear local state
+      setClips([]);
+      
+      // Save empty clips array to MongoDB
+      await mongoDataService.saveClips([]);
+      console.log('✅ All clips cleared and saved to database');
+      
+      // Also clear the JSON file if it exists
+      if (clipsFileHandle) {
+        try {
+          const writable = await clipsFileHandle.createWritable();
+          await writable.write(JSON.stringify([], null, 2));
+          await writable.close();
+          console.log('✅ Cleared clips JSON file');
+        } catch (error) {
+          console.error('❌ Error clearing clips JSON file:', error);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error clearing clips:', error);
+      // If MongoDB save fails, at least clear localStorage as fallback
+      try {
+        localStorage.setItem('clips', JSON.stringify([]));
+        console.log('✅ Cleared clips from localStorage as fallback');
+      } catch (localError) {
+        console.error('❌ Error clearing clips from localStorage:', localError);
+      }
+    }
+  };
+
+  // Function to remove duplicate clips based on videoName, startTime, and endTime
+  const removeDuplicateClips = async () => {
+    try {
+      console.log('🔍 Starting duplicate removal process...');
+      console.log('📊 Total clips before deduplication:', clips.length);
+      
+      // Create a map to track unique clips
+      const uniqueClipsMap = new Map<string, ClipEntry>();
+      const duplicatesFound: ClipEntry[] = [];
+      
+      clips.forEach(clip => {
+        // Create a unique key based on videoName, startTime, and endTime
+        const uniqueKey = `${clip.videoName}_${clip.startTime}_${clip.endTime}`;
+        
+        if (uniqueClipsMap.has(uniqueKey)) {
+          // This is a duplicate
+          duplicatesFound.push(clip);
+          console.log(`🔄 Found duplicate: ${clip.videoName} (${clip.startTime}s-${clip.endTime}s)`);
+        } else {
+          // This is a new unique clip
+          uniqueClipsMap.set(uniqueKey, clip);
+        }
+      });
+      
+      // Convert map values back to array
+      const deduplicatedClips = Array.from(uniqueClipsMap.values());
+      
+      console.log(`📊 Duplicates found: ${duplicatesFound.length}`);
+      console.log(`📊 Clips after deduplication: ${deduplicatedClips.length}`);
+      
+      if (duplicatesFound.length === 0) {
+        console.log('✅ No duplicates found!');
+        return;
+      }
+      
+      // Update local state
+      setClips(deduplicatedClips);
+      
+      // Convert ClipEntry[] to Clip[] for MongoDB
+      const clipsForMongoDB = deduplicatedClips.map(clip => ({
+        videoPath: clip.videoName, // Using videoName as videoPath
+        videoName: clip.videoName,
+        startTime: clip.startTime,
+        endTime: clip.endTime,
+        duration: clip.endTime - clip.startTime,
+        directoryType: clip.category,
+        isWatched: clip.watched,
+        isMemorized: clip.memorized,
+        watchCount: 1, // Default value
+        lastWatchedAt: clip.lastWatchedAt ? new Date(clip.lastWatchedAt) : undefined,
+        memorizedAt: clip.memorized ? new Date() : undefined,
+        watchPercentage: clip.watchPercentage,
+        totalWatchTime: clip.totalWatchTime || 0,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }));
+      
+      // Save to MongoDB
+      await mongoDataService.saveClips(clipsForMongoDB);
+      console.log('✅ Deduplicated clips saved to MongoDB');
+      
+      // Save to JSON file if it exists
+      if (clipsFileHandle) {
+        try {
+          const writable = await clipsFileHandle.createWritable();
+          await writable.write(JSON.stringify(deduplicatedClips, null, 2));
+          await writable.close();
+          console.log('✅ Deduplicated clips saved to JSON file');
+        } catch (error) {
+          console.error('❌ Error saving deduplicated clips to JSON file:', error);
+        }
+      }
+      
+      // Also update localStorage as fallback
+      try {
+        localStorage.setItem('clips', JSON.stringify(deduplicatedClips));
+        console.log('✅ Deduplicated clips saved to localStorage');
+      } catch (localError) {
+        console.error('❌ Error saving deduplicated clips to localStorage:', localError);
+      }
+      
+      console.log(`🎉 Successfully removed ${duplicatesFound.length} duplicate clips!`);
+      
+    } catch (error) {
+      console.error('❌ Error removing duplicate clips:', error);
+    }
   };
 
   // Function to recursively find all video files in a directory
@@ -2763,6 +2888,7 @@ function App() {
                 onCreateSampleClipsFile={createSampleClipsFile}
                 onRemoveClip={removeClip}
                 onClearClips={clearClips}
+                onRemoveDuplicateClips={removeDuplicateClips}
                 getCurrentMemoryClips={getCurrentMemoryClips}
                 isAppStarted={isAppStarted}
                 debugClipsState={debugClipsState}

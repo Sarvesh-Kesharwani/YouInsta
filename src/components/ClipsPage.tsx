@@ -22,7 +22,8 @@ interface ClipsPageProps {
   onSaveClipsToFile: () => void;
   onCreateSampleClipsFile: () => void;
   onRemoveClip: (clipId: string) => void;
-  onClearClips: () => void;
+  onClearClips: () => Promise<void>;
+  onRemoveDuplicateClips: () => Promise<void>;
   getCurrentMemoryClips: () => ClipEntry[];
   isAppStarted: boolean;
   debugClipsState?: () => void;
@@ -38,6 +39,7 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
   onCreateSampleClipsFile,
   onRemoveClip,
   onClearClips,
+  onRemoveDuplicateClips,
   getCurrentMemoryClips,
   isAppStarted,
   debugClipsState,
@@ -115,6 +117,19 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
               📝 Add All Possible Clips
             </button>
           )}
+          <button 
+            className="remove-duplicates-btn"
+            onClick={async () => {
+              try {
+                await onRemoveDuplicateClips();
+              } catch (error) {
+                console.error('Error removing duplicate clips:', error);
+              }
+            }}
+            title="Remove duplicate clips based on video name, start time, and end time"
+          >
+            🗑️ Remove Duplicates
+          </button>
         </div>
         
         {/* Statistics Section */}
@@ -185,7 +200,13 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
                   ))}
                   <button 
                     className="clear-clips-btn"
-                    onClick={onClearClips}
+                    onClick={async () => {
+                      try {
+                        await onClearClips();
+                      } catch (error) {
+                        console.error('Error clearing clips:', error);
+                      }
+                    }}
                   >
                     🗑️ Clear All Clips
                   </button>
