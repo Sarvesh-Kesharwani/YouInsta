@@ -16,7 +16,7 @@ interface VideoFeedProps {
   clips: ClipEntry[];
   coinData: CoinData;
   isClipMemorized: (currentClip: VideoFile) => boolean;
-  addToClips: (currentClip: VideoFile, watchPercentage: number) => void;
+  addToClips: (currentClip: VideoFile, watchPercentage: number) => Promise<void>;
   hasOverlappingWatchedClip: (currentClip: VideoFile) => boolean;
   onQuizAnswer: (isCorrect: boolean, currentClip: VideoFile | null) => void;
   onVideoChange?: () => void;
@@ -319,10 +319,13 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
           isPlaying={isPlaying}
           onPlayPause={() => setIsPlaying(!isPlaying)}
           onProgressUpdate={() => {}}
-          onReach80Percent={() => {
+          onReach80Percent={async () => {
             if (currentVideo && !hasReached80Percent && !isClipProcessedFor80Percent(currentVideo)) {
               setHasReached80Percent(true);
-              addToClips(currentVideo, 80);
+              // Add a small delay to prevent rapid successive calls
+              setTimeout(async () => {
+                await addToClips(currentVideo, 80);
+              }, 100);
             }
           }}
         />

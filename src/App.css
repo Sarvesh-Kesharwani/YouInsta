@@ -1726,4 +1726,141 @@
     padding: 8px 12px;
     font-size: 0.8rem;
   }
+}
+
+/* Current Memory Clips Section */
+.current-memory-clips {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.current-memory-clips h3 {
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.memory-clips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memory-clip-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.memory-clip-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.memory-clip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.memory-clip-index {
+  font-size: 12px;
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.memory-clip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-clip-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.memory-clip-status {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.no-memory-clips {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin: 10px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive styles for memory clips */
+@media (max-width: 768px) {
+  .current-memory-clips {
+    padding: 15px;
+    margin-top: 15px;
+  }
+  
+  .current-memory-clips h3 {
+    font-size: 1.1rem;
+  }
+  
+  .memory-clip-item {
+    padding: 8px 10px;
+  }
+  
+  .memory-clip-name {
+    font-size: 12px;
+  }
+  
+  .memory-clip-time {
+    font-size: 10px;
+  }
+  
+  .memory-clip-status {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .current-memory-clips {
+    padding: 12px;
+    margin-top: 12px;
+  }
+  
+  .current-memory-clips h3 {
+    font-size: 1rem;
+  }
+  
+  .memory-clip-item {
+    padding: 6px 8px;
+  }
+  
+  .memory-clip-name {
+    font-size: 11px;
+  }
+  
+  .memory-clip-time {
+    font-size: 9px;
+  }
+  
+  .memory-clip-status {
+    font-size: 8px;
+  }
 } 

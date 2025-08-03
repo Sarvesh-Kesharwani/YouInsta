@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import VideoFeed from './components/VideoFeed';
 import UploadArea from './components/UploadArea';
@@ -37,7 +37,9 @@ export interface ClipEntry {
   memorized: boolean;
   watched: boolean;
   watchPercentage: number;
-  timestamp: number;
+  quizStatus: 'passed' | 'failed' | 'not_yet_answered';
+  lastWatchedAt?: number;
+  totalWatchTime?: number;
 }
 
 export interface VideoWithRanges {
@@ -171,6 +173,9 @@ function App() {
   const [configSource, setConfigSource] = useState<'localStorage' | 'config.json' | 'defaults' | null>(null);
   
   const [clipsFileHandle, setClipsFileHandle] = useState<any>(null);
+
+  // Ref to track clips currently being processed to prevent duplicate entries
+  const processingClipRef = useRef<Set<string>>(new Set());
 
   // Always load config.json and update config parameters on app start
   useEffect(() => {
@@ -372,7 +377,7 @@ function App() {
           memorized: false,
           watched: true,
           watchPercentage: 85,
-          timestamp: Date.now()
+          quizStatus: 'not_yet_answered'
         }
       ];
       
@@ -643,7 +648,7 @@ function App() {
   const [processedClipsFor80Percent, setProcessedClipsFor80Percent] = useState<Set<string>>(new Set());
 
   // Function to add or update a clip in the clips array
-  const addToClips = (currentClip: VideoFile, watchPercentage: number) => {
+  const addToClips = async (currentClip: VideoFile, watchPercentage: number) => {
     if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
       console.log('Skipping non-clip or invalid clip');
       return;
@@ -658,59 +663,122 @@ function App() {
     // Create a unique identifier for this clip
     const clipIdentifier = `${videoWithRanges.video.name}_${currentClip.startTime}_${currentClip.endTime}`;
 
+    // Check if this clip is currently being processed to prevent duplicate entries
+    if (processingClipRef.current.has(clipIdentifier)) {
+      console.log(`Clip is currently being processed, skipping duplicate call: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
+      return;
+    }
+
     // Check if we've already processed this clip for 80% in this session
     if (processedClipsFor80Percent.has(clipIdentifier)) {
       console.log(`Clip already processed for 80% in this session: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
       return;
     }
 
-    // Check if clip already exists in clips array
-    const existingClip = clips.find(clip =>
-      clip.videoName === videoWithRanges.video.name &&
-      clip.startTime === currentClip.startTime &&
-      clip.endTime === currentClip.endTime
-    );
+    // Add this clip to the processing set
+    processingClipRef.current.add(clipIdentifier);
 
-    if (existingClip) {
-      // If the clip already exists and has 80% or more watched, don't update it
-      if (existingClip.watchPercentage >= 80) {
-        console.log(`Clip already exists with 80%+ watched: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}% - stopping tracking`);
-        // Mark as processed to prevent further tracking
-        setProcessedClipsFor80Percent(prev => new Set(prev).add(clipIdentifier));
+    try {
+      // If clipsFileHandle is null, try to create a new clips.json file
+      if (!clipsFileHandle) {
+        console.log('No clips.json file handle found, attempting to create one...');
+        try {
+          // Try to create clips.json in the current directory if we have a combined directory
+          if (combinedDirectory?.handle) {
+            const newClipsFileHandle = await combinedDirectory.handle.getFileHandle('clips.json', { create: true });
+            const writable = await newClipsFileHandle.createWritable();
+            await writable.write(JSON.stringify([], null, 2));
+            await writable.close();
+            setClipsFileHandle(newClipsFileHandle);
+            console.log('Created new clips.json file for automatic saves');
+          } else {
+            console.log('No combined directory available, clips will be saved to localStorage only');
+          }
+        } catch (error) {
+          console.log('Could not create clips.json file, clips will be saved to localStorage only:', error);
+        }
+      }
+
+      // Get the current clips state to ensure we're working with the latest data
+      const currentClips = [...clips];
+      
+      // Double-check if this clip is already being processed (defensive programming)
+      if (processingClipRef.current.has(clipIdentifier)) {
+        console.log(`Clip is still being processed, skipping: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
         return;
       }
       
-      // Only update if the new percentage is higher and less than 80%
-      if (watchPercentage > existingClip.watchPercentage && watchPercentage < 80) {
-        setClips(prev => prev.map(clip =>
-          clip.id === existingClip.id
-            ? { ...clip, watchPercentage, watched: watchPercentage >= 80 }
-            : clip
-        ));
-        console.log(`Updated watch percentage for existing clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) from ${existingClip.watchPercentage}% to ${watchPercentage}%`);
+      // First, try to find and update an existing clip entry
+      const existingClipIndex = currentClips.findIndex(clip =>
+        clip.videoName === videoWithRanges.video.name &&
+        clip.startTime === currentClip.startTime &&
+        clip.endTime === currentClip.endTime
+      );
+
+      if (existingClipIndex !== -1) {
+        // Clip exists - try to update it
+        const existingClip = currentClips[existingClipIndex];
+        
+        console.log(`Found existing clip at index ${existingClipIndex}: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}%, new: ${watchPercentage}%`);
+        
+        // If the clip already has 80% or more watched, don't update it
+        if (existingClip.watchPercentage >= 80) {
+          console.log(`Clip already exists with 80%+ watched: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}% - stopping tracking`);
+          // Mark as processed to prevent further tracking
+          setProcessedClipsFor80Percent(prev => new Set(prev).add(clipIdentifier));
+          return;
+        }
+        
+        // Update the existing clip if the new percentage is higher
+        if (watchPercentage > existingClip.watchPercentage) {
+          const updatedClips = currentClips.map((clip, index) =>
+            index === existingClipIndex
+              ? { 
+                  ...clip, 
+                  watchPercentage, 
+                  watched: watchPercentage >= 80,
+                  lastWatchedAt: Date.now(),
+                  totalWatchTime: (clip.totalWatchTime || 0) + (watchPercentage - clip.watchPercentage)
+                }
+              : clip
+          );
+          setClips(updatedClips);
+          console.log(`Updated existing clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) from ${existingClip.watchPercentage}% to ${watchPercentage}%`);
+        } else {
+          console.log(`Clip already exists with higher or equal watch percentage: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}%, new: ${watchPercentage}%`);
+        }
       } else {
-        console.log(`Clip already exists with higher or equal watch percentage: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) - current: ${existingClip.watchPercentage}%, new: ${watchPercentage}%`);
+        // Clip doesn't exist - insert a new entry
+        console.log(`No existing clip found, creating new entry for: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
+        console.log(`Current clips count: ${currentClips.length}`);
+        
+        const newClip: ClipEntry = {
+          id: Math.random().toString(36).substr(2, 9),
+          videoName: videoWithRanges.video.name,
+          startTime: currentClip.startTime,
+          endTime: currentClip.endTime,
+          category: videoWithRanges.category,
+          memorized: false,
+          watched: watchPercentage >= 80,
+          watchPercentage,
+          quizStatus: 'not_yet_answered',
+          lastWatchedAt: Date.now(),
+          totalWatchTime: watchPercentage
+        };
+
+        const updatedClips = [...currentClips, newClip];
+        setClips(updatedClips);
+        console.log(`Inserted new clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
       }
-    } else {
-      // Add new clip entry
-      const newClip: ClipEntry = {
-        id: Math.random().toString(36).substr(2, 9),
-        videoName: videoWithRanges.video.name,
-        startTime: currentClip.startTime,
-        endTime: currentClip.endTime,
-        category: videoWithRanges.category,
-        memorized: false,
-        watched: watchPercentage >= 80,
-        watchPercentage,
-        timestamp: Date.now()
-      };
 
-      setClips(prev => [...prev, newClip]);
-      console.log(`Added new clip: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s) with ${watchPercentage}% watched`);
+      // Mark this clip as processed for 80% in this session
+      setProcessedClipsFor80Percent(prev => new Set(prev).add(clipIdentifier));
+    } catch (error) {
+      console.error('Error in addToClips:', error);
+    } finally {
+      // Always remove this clip from the processing set, even if an error occurred
+      processingClipRef.current.delete(clipIdentifier);
     }
-
-    // Mark this clip as processed for 80% in this session
-    setProcessedClipsFor80Percent(prev => new Set(prev).add(clipIdentifier));
   };
 
   // Function to check if a clip has been watched (80% or more)
@@ -768,15 +836,78 @@ function App() {
       addCoins(1);
       console.log('Correct answer! +1 coin');
       
-      // If the answer was correct and the clip is watched 80% or more, mark it as memorized
-      if (currentClip && isClipWatched(currentClip)) {
-        markAsMemorized(currentClip);
-        console.log('Clip was watched 80% or more and answer was correct - marked as memorized');
+      // Update quiz status for the current clip
+      if (currentClip) {
+        updateClipQuizStatus(currentClip, 'passed');
+        
+        // If the answer was correct and the clip is watched 80% or more, mark it as memorized
+        if (isClipWatched(currentClip)) {
+          markAsMemorized(currentClip);
+          console.log('Clip was watched 80% or more and answer was correct - marked as memorized');
+        }
       }
     } else {
       removeCoins(1);
       console.log('Incorrect answer! -1 coin');
+      
+      // Update quiz status for the current clip
+      if (currentClip) {
+        updateClipQuizStatus(currentClip, 'failed');
+      }
     }
+  };
+
+  // Function to update quiz status for a clip
+  const updateClipQuizStatus = (currentClip: VideoFile, status: 'passed' | 'failed' | 'not_yet_answered') => {
+    if (!currentClip.isClip || currentClip.startTime === undefined || currentClip.endTime === undefined) {
+      return;
+    }
+
+    const originalVideoId = currentClip.id.split('_clip_')[0];
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === originalVideoId);
+    if (!videoWithRanges) {
+      return;
+    }
+
+    setClips(prev => prev.map(clip => {
+      if (clip.videoName === videoWithRanges.video.name &&
+          clip.startTime === currentClip.startTime &&
+          clip.endTime === currentClip.endTime) {
+        return { ...clip, quizStatus: status };
+      }
+      return clip;
+    }));
+  };
+
+  // Function to get the 7 clips currently in memory
+  const getCurrentMemoryClips = (): ClipEntry[] => {
+    if (clipQueue.clips.length === 0) return [];
+    
+    const currentClips: ClipEntry[] = [];
+    
+    clipQueue.clips.forEach(clip => {
+      if (!clip.isClip || clip.startTime === undefined || clip.endTime === undefined) {
+        return;
+      }
+      
+      const originalVideoId = clip.id.split('_clip_')[0];
+      const videoWithRanges = videoRanges.find(vr => vr.video.id === originalVideoId);
+      if (!videoWithRanges) {
+        return;
+      }
+      
+      const clipEntry = clips.find(c => 
+        c.videoName === videoWithRanges.video.name &&
+        c.startTime === clip.startTime &&
+        c.endTime === clip.endTime
+      );
+      
+      if (clipEntry) {
+        currentClips.push(clipEntry);
+      }
+    });
+    
+    return currentClips;
   };
 
   // Function to clear processed clips when video changes
@@ -920,7 +1051,7 @@ function App() {
         memorized: true,
         watched: false,
         watchPercentage: 0,
-        timestamp: Date.now()
+        quizStatus: 'not_yet_answered'
       };
 
       setClips(prev => [...prev, newClip]);
@@ -2304,7 +2435,10 @@ function App() {
                       <span className="clip-category">{clip.category}</span>
                       <span className="clip-status">
                         {clip.memorized ? '🧠 Memorized' : '❌ Not Memorized'} | 
-                        {clip.watched ? ` 👁️ Watched (${clip.watchPercentage}%)` : ' 👁️ Not Watched'}
+                        {clip.watched ? ` 👁️ Watched (${clip.watchPercentage}%)` : ' 👁️ Not Watched'} |
+                        {clip.quizStatus === 'passed' ? ' ✅ Quiz Passed' : 
+                         clip.quizStatus === 'failed' ? ' ❌ Quiz Failed' : ' ❓ Quiz Not Answered'}
+                        {clip.lastWatchedAt && ` | Last: ${new Date(clip.lastWatchedAt).toLocaleTimeString()}`}
                       </span>
                     </div>
                     <button 
@@ -2325,6 +2459,36 @@ function App() {
               </div>
             ) : (
               <p className="no-clips">No clips yet. Start the app and clips will be added as you watch them!</p>
+            )}
+
+            {/* Current Memory Clips Section */}
+            {isAppStarted && (
+              <div className="current-memory-clips">
+                <h3>🧠 Current 7 Clips in Memory</h3>
+                {getCurrentMemoryClips().length > 0 ? (
+                  <div className="memory-clips-list">
+                    {getCurrentMemoryClips().map((clip, index) => (
+                      <div key={`memory-${clip.id}`} className="memory-clip-item">
+                        <div className="memory-clip-info">
+                          <span className="memory-clip-index">#{index + 1}</span>
+                          <span className="memory-clip-name">{clip.videoName}</span>
+                          <span className="memory-clip-time">
+                            {Math.floor(clip.startTime / 60)}:{(clip.startTime % 60).toString().padStart(2, '0')} - 
+                            {Math.floor(clip.endTime / 60)}:{(clip.endTime % 60).toString().padStart(2, '0')}
+                          </span>
+                          <span className="memory-clip-status">
+                            {clip.watchPercentage}% watched | 
+                            {clip.quizStatus === 'passed' ? ' ✅ Passed' : 
+                             clip.quizStatus === 'failed' ? ' ❌ Failed' : ' ❓ Not Answered'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-memory-clips">No clips currently in memory. Start scrolling to load clips!</p>
+                )}
+              </div>
             )}
           </div>
 
