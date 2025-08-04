@@ -2265,6 +2265,43 @@ function App() {
   };
 
   // Function to update video durations when videos are loaded
+  const addNewVideosToVideoData = async () => {
+    const allVideos = [...relaxVideos, ...studyVideos];
+    
+    setVideoData(prevVideoData => {
+      const updatedVideoData = [...prevVideoData];
+      let newVideosAdded = 0;
+      
+      allVideos.forEach(video => {
+        const existingVideoIndex = updatedVideoData.findIndex(vd => vd.id === video.id);
+        
+        if (existingVideoIndex === -1) {
+          // This is a new video, add it to videoData
+          const newVideoData: VideoData = {
+            id: video.id,
+            name: video.name,
+            category: relaxVideos.find(rv => rv.id === video.id) ? 'relax' : 'study',
+            duration: 0, // Will be updated when video duration is available
+            memorizedRanges: [],
+            totalMemorizedTime: 0,
+            memorizedPercentage: 0,
+            lastUpdated: new Date().toDateString()
+          };
+          
+          updatedVideoData.push(newVideoData);
+          newVideosAdded++;
+          console.log(`📹 Added new video to tracking: ${video.name} (${newVideoData.category})`);
+        }
+      });
+      
+      if (newVideosAdded > 0) {
+        console.log(`📹 Added ${newVideosAdded} new videos to video tracking`);
+      }
+      
+      return updatedVideoData;
+    });
+  };
+
   const updateVideoDurations = async () => {
     const allVideos = [...relaxVideos, ...studyVideos];
     
@@ -2654,6 +2691,12 @@ function App() {
           setVideoRanges(newVideoRanges);
           console.log(`Generated ${newVideoRanges.length} video ranges`);
           
+          // Add new videos to videoData and update durations
+          setTimeout(() => {
+            addNewVideosToVideoData();
+            updateVideoDurations();
+          }, 1000);
+          
           // Return early since we've handled the combined directory
           return;
           
@@ -2751,6 +2794,12 @@ function App() {
         const newVideoRanges = await calculateTimeRanges(relaxVideos, studyVideos);
         setVideoRanges(newVideoRanges);
         console.log(`Generated ${newVideoRanges.length} video ranges`);
+        
+        // Add new videos to videoData and update durations
+        setTimeout(() => {
+          addNewVideosToVideoData();
+          updateVideoDurations();
+        }, 1000);
       }
       
     } catch (error) {
@@ -3135,8 +3184,9 @@ function App() {
         console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos! 📁 (No JSON files found)`);
       }
 
-      // Update video durations for existing video data
+      // Add new videos to videoData and update durations
       setTimeout(() => {
+        addNewVideosToVideoData();
         updateVideoDurations();
       }, 1000);
         
