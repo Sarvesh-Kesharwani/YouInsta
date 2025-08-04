@@ -32,7 +32,7 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   getInitialClip, 
   onBackToHome,
   markAsMemorized,
-  clips,
+
   coinData,
   isClipMemorized,
   addToClips,

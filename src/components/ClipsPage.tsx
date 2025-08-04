@@ -15,6 +15,20 @@ interface ClipEntry {
   totalWatchTime?: number;
 }
 
+interface VideoData {
+  id: string;
+  name: string;
+  category: 'relax' | 'study';
+  duration: number; // Total duration in seconds
+  memorizedRanges: {
+    startTime: number;
+    endTime: number;
+  }[];
+  totalMemorizedTime: number; // Total memorized time in seconds
+  memorizedPercentage: number; // Percentage of video memorized
+  lastUpdated: string;
+}
+
 interface ClipsPageProps {
   clips: ClipEntry[];
   clipsFileHandle: any;
@@ -29,6 +43,12 @@ interface ClipsPageProps {
   debugClipsState?: () => void;
   testAddClip?: () => void;
   addAllPossibleClips?: () => void;
+  // New props for video data
+  videoData: VideoData[];
+  videosFileHandle: any;
+  onLoadVideosDataFromFile: () => void;
+  onSaveVideosDataToFile: () => void;
+  onCreateSampleVideosDataFile: () => void;
 }
 
 const ClipsPage: React.FC<ClipsPageProps> = ({
@@ -44,14 +64,131 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
   isAppStarted,
   debugClipsState,
   testAddClip,
-  addAllPossibleClips
+  addAllPossibleClips,
+  // New props for video data
+  videoData,
+  videosFileHandle,
+  onLoadVideosDataFromFile,
+  onSaveVideosDataToFile,
+  onCreateSampleVideosDataFile
 }) => {
   const [isClipsListExpanded, setIsClipsListExpanded] = useState(true);
+  const [isVideosListExpanded, setIsVideosListExpanded] = useState(true);
   return (
     <div className="clips-page">
       <div className="clips-header">
         <h1>📋 All Clips</h1>
         <p>Manage your watched and memorized video clips</p>
+      </div>
+
+      {/* Videos Section */}
+      <div className="videos-section">
+        <div className="videos-section-header">
+          <h2>🎬 Videos ({videoData.length})</h2>
+          <button 
+            className="toggle-videos-btn"
+            onClick={() => setIsVideosListExpanded(!isVideosListExpanded)}
+            title={isVideosListExpanded ? "Collapse videos list" : "Expand videos list"}
+          >
+            {isVideosListExpanded ? '🔽' : '▶️'}
+          </button>
+        </div>
+        
+        {isVideosListExpanded && (
+          <>
+            {/* Video File Status Indicator */}
+            <div className="videos-file-status">
+              <span className={`status-indicator ${videosFileHandle ? 'enabled' : 'disabled'}`}>
+                {videosFileHandle ? '✅' : '⚠️'} Auto-save: {videosFileHandle ? 'Enabled' : 'Disabled'}
+              </span>
+              {!videosFileHandle && videoData.length > 0 && (
+                <span className="status-note">
+                  Video data is saved to localStorage only. Click "Save to File" to enable automatic file saving.
+                </span>
+              )}
+            </div>
+            
+            {/* Video File Management Buttons */}
+            <div className="videos-file-buttons">
+              <button 
+                className="load-videos-btn"
+                onClick={onLoadVideosDataFromFile}
+                title="Load video data from file"
+              >
+                📂 Load from File
+              </button>
+              <button 
+                className="save-videos-btn"
+                onClick={onSaveVideosDataToFile}
+                title="Save video data to file"
+              >
+                💾 Save to File
+              </button>
+              <button 
+                className="create-sample-videos-btn"
+                onClick={onCreateSampleVideosDataFile}
+                title="Create a sample videos.json file"
+              >
+                📝 Create Sample File
+              </button>
+            </div>
+
+            {/* Videos List */}
+            {videoData.length > 0 ? (
+              <div className="videos-list">
+                {videoData.map((video) => (
+                  <div key={video.id} className="video-item">
+                    <div className="video-info">
+                      <div className="video-header">
+                        <span className="video-name">{video.name}</span>
+                        <span className="video-category">{video.category}</span>
+                        <span className="video-duration">
+                          {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="video-progress-container">
+                        <div className="video-progress-bar">
+                          {video.memorizedRanges.map((range, index) => (
+                            <div
+                              key={index}
+                              className="memorized-segment"
+                              style={{
+                                left: `${(range.startTime / video.duration) * 100}%`,
+                                width: `${((range.endTime - range.startTime) / video.duration) * 100}%`
+                              }}
+                              title={`Memorized: ${Math.floor(range.startTime / 60)}:${(range.startTime % 60).toString().padStart(2, '0')} - ${Math.floor(range.endTime / 60)}:${(range.endTime % 60).toString().padStart(2, '0')}`}
+                            />
+                          ))}
+                        </div>
+                        <div className="video-progress-labels">
+                          <span className="progress-text">
+                            {video.memorizedPercentage.toFixed(1)}% memorized
+                          </span>
+                          <span className="progress-time">
+                            {Math.floor(video.totalMemorizedTime / 60)}:{(video.totalMemorizedTime % 60).toString().padStart(2, '0')} / {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="video-stats">
+                        <span className="video-memorized-ranges">
+                          {video.memorizedRanges.length} memorized segment{video.memorizedRanges.length !== 1 ? 's' : ''}
+                        </span>
+                        <span className="video-last-updated">
+                          Last updated: {new Date(video.lastUpdated).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-videos">No videos yet. Start the app and videos will be added as you mark clips as memorized!</p>
+            )}
+          </>
+        )}
       </div>
 
       <div className="clips-content">

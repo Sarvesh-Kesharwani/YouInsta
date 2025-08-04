@@ -2,14 +2,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './HomePage.css';
 
-interface WatchTimeData {
-  totalMinutes: number;
-  date: string;
-  history: {
-    date: string;
-    minutes: number;
-  }[];
-}
+
 
 interface StudyData {
   coins: {

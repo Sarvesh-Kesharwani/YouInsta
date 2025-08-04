@@ -92,6 +92,20 @@ export interface StudyData {
   };
 }
 
+export interface VideoData {
+  id: string;
+  name: string;
+  category: 'relax' | 'study';
+  duration: number; // Total duration in seconds
+  memorizedRanges: {
+    startTime: number;
+    endTime: number;
+  }[];
+  totalMemorizedTime: number; // Total memorized time in seconds
+  memorizedPercentage: number; // Percentage of video memorized
+  lastUpdated: string;
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [relaxVideos, setRelaxVideos] = useState<VideoFile[]>([]);
@@ -106,6 +120,8 @@ function App() {
   });
   const [isAppStarted, setIsAppStarted] = useState(false);
   const [clips, setClips] = useState<ClipEntry[]>([]);
+  const [videoData, setVideoData] = useState<VideoData[]>([]);
+  const [videosFileHandle, setVideosFileHandle] = useState<any>(null);
   const [coinData, setCoinData] = useState<StudyData>({
     coins: {
       totalCoins: 0,
@@ -389,6 +405,21 @@ function App() {
           }
         }
 
+        // Auto-load video data
+        console.log('🔄 Auto-loading video data...');
+        try {
+          const savedVideoData = localStorage.getItem('instalearn_video_data');
+          if (savedVideoData) {
+            const parsedVideoData = JSON.parse(savedVideoData);
+            if (Array.isArray(parsedVideoData)) {
+              setVideoData(parsedVideoData);
+              console.log('✅ Video data auto-loaded from localStorage');
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Error auto-loading video data:', error);
+        }
+
         console.log('✅ All saved data loaded successfully');
       } catch (error) {
         console.error('Error loading saved data:', error);
@@ -470,8 +501,45 @@ function App() {
         coinData.watchTime.totalMinutes > 0 || coinData.watchTime.history.length > 0) {
       saveStudyData();
     }
-  }, [coinData.coins.totalCoins, coinData.coins.earnedToday, coinData.coins.history.length, 
+    }, [coinData.coins.totalCoins, coinData.coins.earnedToday, coinData.coins.history.length,
       coinData.watchTime.totalMinutes, coinData.watchTime.history.length, coinsFileHandle]);
+
+  // Auto-save video data
+  useEffect(() => {
+    const saveVideoData = async () => {
+      try {
+        // Save to localStorage as fallback
+        try {
+          localStorage.setItem('instalearn_video_data', JSON.stringify(videoData));
+          console.log('💾 Video data saved to localStorage as fallback');
+        } catch (localStorageError) {
+          console.error('Error saving video data to localStorage:', localStorageError);
+        }
+        
+        // Save to videos.json file if we have a file handle
+        if (videosFileHandle) {
+          const saveToFile = async () => {
+            try {
+              const writable = await videosFileHandle.createWritable();
+              await writable.write(JSON.stringify(videoData, null, 2));
+              await writable.close();
+              console.log('✅ Automatically saved video data to videos.json');
+            } catch (error) {
+              console.error('❌ Error auto-saving video data to file:', error);
+              setVideosFileHandle(null);
+            }
+          };
+          saveToFile();
+        }
+      } catch (error) {
+        console.error('Error saving video data:', error);
+      }
+    };
+    
+    if (videoData.length > 0) {
+      saveVideoData();
+    }
+  }, [videoData, videosFileHandle]);
 
   // Update clips whenever they change
   useEffect(() => {
@@ -950,6 +1018,78 @@ function App() {
       console.log('Sample watch_time.json file created successfully!');
     } catch (error) {
       console.error('Error creating sample watch time file:', error);
+    }
+  };
+
+  // Function to save videos data to file
+  const saveVideosDataToFile = async () => {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'videos.json',
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      
+      const writable = await handle.createWritable();
+      await writable.write(JSON.stringify(videoData, null, 2));
+      await writable.close();
+      
+      setVideosFileHandle(handle);
+      console.log('✅ Videos data saved to file');
+    } catch (error) {
+      console.error('❌ Error saving videos data to file:', error);
+    }
+  };
+
+  // Function to load videos data from file
+  const loadVideosDataFromFile = async () => {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }],
+        multiple: false
+      });
+      
+      const file = await handle.getFile();
+      const content = await file.text();
+      const loadedVideoData = JSON.parse(content);
+      
+      if (Array.isArray(loadedVideoData)) {
+        setVideoData(loadedVideoData);
+        setVideosFileHandle(handle);
+        console.log('✅ Videos data loaded from file');
+      } else {
+        console.error('❌ Invalid videos data format');
+      }
+    } catch (error) {
+      console.error('❌ Error loading videos data from file:', error);
+    }
+  };
+
+  // Function to create sample videos data file
+  const createSampleVideosDataFile = async () => {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'videos.json',
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      
+      const sampleData: VideoData[] = [];
+      
+      const writable = await handle.createWritable();
+      await writable.write(JSON.stringify(sampleData, null, 2));
+      await writable.close();
+      
+      console.log('✅ Sample videos data file created');
+    } catch (error) {
+      console.error('❌ Error creating sample videos data file:', error);
     }
   };
 
@@ -2065,6 +2205,97 @@ function App() {
       }));
       console.log('🔄 Regenerated clip queue after memorization change');
     }, 100);
+
+    // Update video data with memorized ranges
+    updateVideoDataWithMemorizedClip(currentClip);
+  };
+
+  // Function to update video data when a clip is memorized
+  const updateVideoDataWithMemorizedClip = (currentClip: VideoFile) => {
+    const originalVideoId = currentClip.id.split('_clip_')[0];
+    const videoWithRanges = videoRanges.find(vr => vr.video.id === originalVideoId);
+    
+    if (!videoWithRanges) return;
+
+    setVideoData(prevVideoData => {
+      const existingVideoIndex = prevVideoData.findIndex(vd => vd.id === originalVideoId);
+      const newMemorizedRange = {
+        startTime: currentClip.startTime || 0,
+        endTime: currentClip.endTime || 0
+      };
+
+      if (existingVideoIndex >= 0) {
+        // Update existing video data
+        const existingVideo = prevVideoData[existingVideoIndex];
+        const updatedMemorizedRanges = [...existingVideo.memorizedRanges, newMemorizedRange];
+        
+        // Calculate total memorized time
+        const totalMemorizedTime = updatedMemorizedRanges.reduce((total, range) => {
+          return total + (range.endTime - range.startTime);
+        }, 0);
+        
+        const memorizedPercentage = (totalMemorizedTime / existingVideo.duration) * 100;
+
+        const updatedVideoData = [...prevVideoData];
+        updatedVideoData[existingVideoIndex] = {
+          ...existingVideo,
+          memorizedRanges: updatedMemorizedRanges,
+          totalMemorizedTime,
+          memorizedPercentage,
+          lastUpdated: new Date().toDateString()
+        };
+
+        return updatedVideoData;
+      } else {
+        // Create new video data entry
+        const newVideoData: VideoData = {
+          id: originalVideoId,
+          name: videoWithRanges.video.name,
+          category: videoWithRanges.category,
+          duration: 0, // Will be updated when video duration is available
+          memorizedRanges: [newMemorizedRange],
+          totalMemorizedTime: newMemorizedRange.endTime - newMemorizedRange.startTime,
+          memorizedPercentage: 0, // Will be calculated when duration is available
+          lastUpdated: new Date().toDateString()
+        };
+
+        return [...prevVideoData, newVideoData];
+      }
+    });
+  };
+
+  // Function to update video durations when videos are loaded
+  const updateVideoDurations = async () => {
+    const allVideos = [...relaxVideos, ...studyVideos];
+    
+    setVideoData(prevVideoData => {
+      const updatedVideoData = [...prevVideoData];
+      
+      allVideos.forEach(video => {
+        const existingVideoIndex = updatedVideoData.findIndex(vd => vd.id === video.id);
+        
+        if (existingVideoIndex >= 0) {
+          // Update duration if we can get it from the video element
+          const videoElement = document.createElement('video');
+          videoElement.src = video.url;
+          
+          videoElement.addEventListener('loadedmetadata', () => {
+            const duration = videoElement.duration;
+            if (duration && duration > 0) {
+              updatedVideoData[existingVideoIndex] = {
+                ...updatedVideoData[existingVideoIndex],
+                duration,
+                memorizedPercentage: (updatedVideoData[existingVideoIndex].totalMemorizedTime / duration) * 100
+              };
+            }
+          });
+          
+          videoElement.load();
+        }
+      });
+      
+      return updatedVideoData;
+    });
   };
 
   // Function to remove a clip from clips list
@@ -2899,10 +3130,15 @@ function App() {
         }
         
         if (loadedMemorizedClips.length > 0 || loadedCoinData) {
-          console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos, ${loadedMemorizedClips.length} memorized clips, and coin data! 🧠📁🪙`);
-        } else {
-          console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos! 📁 (No JSON files found)`);
-        }
+                  console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos, ${loadedMemorizedClips.length} memorized clips, and coin data! 🧠📁🪙`);
+      } else {
+        console.log(`Successfully loaded ${relaxVideos.length + studyVideos.length} videos! 📁 (No JSON files found)`);
+      }
+
+      // Update video durations for existing video data
+      setTimeout(() => {
+        updateVideoDurations();
+      }, 1000);
         
         // Mark app as started when videos are loaded
         setIsAppStarted(true);
@@ -3701,6 +3937,12 @@ function App() {
                 debugClipsState={debugClipsState}
                 testAddClip={testAddClip}
                 addAllPossibleClips={addAllPossibleClipsToDatabase}
+                // New props for video data
+                videoData={videoData}
+                videosFileHandle={videosFileHandle}
+                onLoadVideosDataFromFile={loadVideosDataFromFile}
+                onSaveVideosDataToFile={saveVideosDataToFile}
+                onCreateSampleVideosDataFile={createSampleVideosDataFile}
               />
             )}
           </div>

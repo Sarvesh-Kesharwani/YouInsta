@@ -157,9 +157,9 @@ export class MigrationService {
       }
 
       // Migrate clips if they exist
-      if (localStorageData.youinsta_clips) {
+      if (localStorageData.instalearn_clips) {
         try {
-          const clips = JSON.parse(localStorageData.youinsta_clips);
+          const clips = JSON.parse(localStorageData.instalearn_clips);
           if (Array.isArray(clips) && clips.length > 0) {
             // Transform clips to match MongoDB schema
             const transformedClips = clips.map((clip: any) => ({
