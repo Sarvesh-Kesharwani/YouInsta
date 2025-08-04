@@ -8,17 +8,17 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) => {
   const menuItems = [
-    { id: 'home', label: '🏠 Home', icon: '🏠' },
-    { id: 'upload', label: '📤 Upload', icon: '📤' },
-    { id: 'config', label: '⚙️ Config', icon: '⚙️' },
-    { id: 'clips', label: '📋 Clips', icon: '📋' },
-    { id: 'video-feed', label: '🎬 Video Feed', icon: '🎬' }
+    { id: 'home', label: 'Home', icon: '🏠' },
+    { id: 'upload', label: 'Upload', icon: '📤' },
+    { id: 'config', label: 'Config', icon: '⚙️' },
+    { id: 'clips', label: 'Clips', icon: '📋' },
+    { id: 'video-feed', label: 'Video Feed', icon: '🎬' }
   ];
 
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h2>YouInsta</h2>
+        <h2>Instalearn</h2>
       </div>
       <nav className="sidebar-nav">
         {menuItems.map((item) => (

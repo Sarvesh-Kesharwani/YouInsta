@@ -31,10 +31,10 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   getPreviousClip, 
   getInitialClip, 
   onBackToHome,
-  // markAsMemorized,
-  // clips,
+  markAsMemorized,
+  clips,
   coinData,
-  // isClipMemorized,
+  isClipMemorized,
   addToClips,
   updateClipProgress,
   hasOverlappingWatchedClip,
@@ -178,6 +178,13 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
         setShowQuiz(false);
         setQuizAnswered(false);
       }, 2000);
+    }
+  };
+
+  const handleAutoScrollToNext = async () => {
+    const nextClip = await getNextClip();
+    if (nextClip) {
+      setCurrentVideo(nextClip);
     }
   };
 
@@ -344,6 +351,8 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
               }, 100);
             }
           }}
+          onAutoScrollToNext={handleAutoScrollToNext}
+          isRelaxClip={isRelaxClip(currentVideo)}
         />
         
         <div className="video-overlay">
@@ -371,6 +380,19 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
             </button> */}
           </div>
         </div>
+
+        {/* Memorized Button - Only show for study videos */}
+        {!isRelaxClip(currentVideo) && (
+          <div className="memorized-button-container">
+            <button 
+              className={`memorized-btn ${isClipMemorized(currentVideo) ? 'memorized' : ''}`}
+              onClick={() => markAsMemorized(currentVideo)}
+              title={isClipMemorized(currentVideo) ? "Already memorized" : "Mark as memorized"}
+            >
+              {isClipMemorized(currentVideo) ? '🧠 Memorized' : '🧠 Mark as Memorized'}
+            </button>
+          </div>
+        )}
 
         {/* Quiz for repeated clips */}
         {showQuiz && (

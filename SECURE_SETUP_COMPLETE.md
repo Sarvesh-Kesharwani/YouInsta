@@ -128,7 +128,7 @@ When you're ready to deploy:
 
 ## 🎉 **Setup Complete!**
 
-Your YouInsta application now has:
+Your Instalearn application now has:
 - ✅ **Secure MongoDB Atlas connection**
 - ✅ **Environment-based configuration**
 - ✅ **Automated setup process**

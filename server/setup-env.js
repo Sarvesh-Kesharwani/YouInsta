@@ -9,7 +9,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-console.log('🔧 YouInsta Environment Setup');
+console.log('🔧 Instalearn Environment Setup');
 console.log('=============================\n');
 
 const envPath = path.join(__dirname, '.env');

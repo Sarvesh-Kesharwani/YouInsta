@@ -43,7 +43,7 @@ app.use('/api/clips', clipsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'YouInsta API is running' });
+      res.json({ status: 'OK', message: 'Instalearn API is running' });
 });
 
 app.listen(PORT, () => {

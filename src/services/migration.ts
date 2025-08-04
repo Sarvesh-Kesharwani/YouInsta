@@ -3,19 +3,19 @@ import { apiService } from './api';
 // Types for localStorage data
 interface LocalStorageData {
   // User preferences
-  youinsta_config?: string;
-  youinsta_relax_dirs?: string;
-  youinsta_study_dirs?: string;
-  youinsta_combined_dir?: string;
-  youinsta_app_started?: string;
+  instalearn_config?: string;
+  instalearn_relax_dirs?: string;
+  instalearn_study_dirs?: string;
+  instalearn_combined_dir?: string;
+  instalearn_app_started?: string;
   
   // Clips and coin data
-  youinsta_clips?: string;
-  youinsta_coin_data?: string;
+  instalearn_clips?: string;
+  instalearn_coin_data?: string;
   
   // Video ranges and queue
-  youinsta_video_ranges?: string;
-  youinsta_clip_queue?: string;
+  instalearn_video_ranges?: string;
+  instalearn_clip_queue?: string;
 }
 
 interface MigrationResult {
@@ -41,15 +41,15 @@ export class MigrationService {
    */
   hasLocalStorageData(): boolean {
     const keys = [
-      'youinsta_config',
-      'youinsta_relax_dirs',
-      'youinsta_study_dirs',
-      'youinsta_combined_dir',
-      'youinsta_app_started',
-      'youinsta_clips',
-      'youinsta_coin_data',
-      'youinsta_video_ranges',
-      'youinsta_clip_queue'
+      'instalearn_config',
+      'instalearn_relax_dirs',
+      'instalearn_study_dirs',
+      'instalearn_combined_dir',
+      'instalearn_app_started',
+      'instalearn_clips',
+      'instalearn_coin_data',
+      'instalearn_video_ranges',
+      'instalearn_clip_queue'
     ];
 
     return keys.some(key => localStorage.getItem(key) !== null);
@@ -60,15 +60,15 @@ export class MigrationService {
    */
   private getLocalStorageData(): LocalStorageData {
     return {
-      youinsta_config: localStorage.getItem('youinsta_config') || undefined,
-      youinsta_relax_dirs: localStorage.getItem('youinsta_relax_dirs') || undefined,
-      youinsta_study_dirs: localStorage.getItem('youinsta_study_dirs') || undefined,
-      youinsta_combined_dir: localStorage.getItem('youinsta_combined_dir') || undefined,
-      youinsta_app_started: localStorage.getItem('youinsta_app_started') || undefined,
-      youinsta_clips: localStorage.getItem('youinsta_clips') || undefined,
-      youinsta_coin_data: localStorage.getItem('youinsta_coin_data') || undefined,
-      youinsta_video_ranges: localStorage.getItem('youinsta_video_ranges') || undefined,
-      youinsta_clip_queue: localStorage.getItem('youinsta_clip_queue') || undefined,
+          instalearn_config: localStorage.getItem('instalearn_config') || undefined,
+    instalearn_relax_dirs: localStorage.getItem('instalearn_relax_dirs') || undefined,
+    instalearn_study_dirs: localStorage.getItem('instalearn_study_dirs') || undefined,
+    instalearn_combined_dir: localStorage.getItem('instalearn_combined_dir') || undefined,
+    instalearn_app_started: localStorage.getItem('instalearn_app_started') || undefined,
+    instalearn_clips: localStorage.getItem('instalearn_clips') || undefined,
+    instalearn_coin_data: localStorage.getItem('instalearn_coin_data') || undefined,
+    instalearn_video_ranges: localStorage.getItem('instalearn_video_ranges') || undefined,
+    instalearn_clip_queue: localStorage.getItem('instalearn_clip_queue') || undefined,
     };
   }
 

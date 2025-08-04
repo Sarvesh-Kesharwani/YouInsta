@@ -1,4 +1,4 @@
-# MongoDB Atlas Setup for YouInsta
+# MongoDB Atlas Setup for Instalearn
 
 ## Quick Setup (Recommended)
 
@@ -148,7 +148,7 @@ curl http://localhost:5000/api/health
 
 Should return:
 ```json
-{"status":"OK","message":"YouInsta API is running"}
+{"status":"OK","message":"Instalearn API is running"}
 ```
 
 ## Security Notes

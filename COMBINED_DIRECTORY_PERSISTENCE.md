@@ -2,7 +2,7 @@
 
 ## Overview
 
-The YouInsta application now supports persistent combined directory selection. This means that once you select a combined directory (containing both "relax" and "study" folders), the application will remember this selection and automatically reload it when you restart the app.
+The Instalearn application now supports persistent combined directory selection. This means that once you select a combined directory (containing both "relax" and "study" folders), the application will remember this selection and automatically reload it when you restart the app.
 
 ## How It Works
 
@@ -37,9 +37,9 @@ The YouInsta application now supports persistent combined directory selection. T
 ## Technical Details
 
 ### Storage Location
-- Combined directory info: `localStorage.getItem('youinsta_combined_dir')`
-- Clips data: `localStorage.getItem('youinsta_clips')`
-- Coin data: `localStorage.getItem('youinsta_coin_data')`
+- Combined directory info: `localStorage.getItem('instalearn_combined_dir')`
+- Clips data: `localStorage.getItem('instalearn_clips')`
+- Coin data: `localStorage.getItem('instalearn_coin_data')`
 
 ### File Structure Expected
 ```

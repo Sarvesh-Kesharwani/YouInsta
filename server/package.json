@@ -1,7 +1,7 @@
 {
   "name": "youinsta-server",
   "version": "1.0.0",
-  "description": "YouInsta Backend Server with MongoDB Atlas",
+  "description": "Instalearn Backend Server with MongoDB Atlas",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -16,7 +16,7 @@
     "express",
     "api"
   ],
-  "author": "YouInsta Team",
+  "author": "Instalearn Team",
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",

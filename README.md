@@ -1,4 +1,4 @@
-# YouInsta - Instagram-like Short Video App
+# Instalearn - Instagram-like Short Video App
 
 A modern web application that allows you to upload a folder of videos and scroll through them in a random order, just like Instagram Reels or YouTube Shorts. Features advanced clip management, quiz system, and memory tracking.
 

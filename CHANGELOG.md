@@ -1,4 +1,4 @@
-# YouInsta Changelog
+# Instalearn Changelog
 
 ## [Unreleased] - 2024-12-19
 
@@ -311,4 +311,4 @@
 
 ---
 
-*This changelog documents the evolution of YouInsta from a basic video player to a sophisticated video management and streaming application with advanced features like folder selection, memory management, dual-category content organization, enhanced clip tracking, quiz system, and comprehensive learning analytics.* 
+*This changelog documents the evolution of Instalearn from a basic video player to a sophisticated video management and streaming application with advanced features like folder selection, memory management, dual-category content organization, enhanced clip tracking, quiz system, and comprehensive learning analytics.* 

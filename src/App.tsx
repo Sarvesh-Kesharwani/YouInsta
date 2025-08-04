@@ -134,7 +134,7 @@ function App() {
   const [clipDurationMinutes, setClipDurationMinutes] = useState(() => {
     // Try to get the value from localStorage first
     try {
-      const savedConfig = localStorage.getItem('youinsta_config');
+      const savedConfig = localStorage.getItem('instalearn_config');
       if (savedConfig) {
         const config = JSON.parse(savedConfig);
         if (config.clipDurationMinutes && typeof config.clipDurationMinutes === 'number') {
@@ -150,7 +150,7 @@ function App() {
   // Random clip duration feature
   const [isRandomClipDurationEnabled, setIsRandomClipDurationEnabled] = useState(() => {
     try {
-      const savedConfig = localStorage.getItem('youinsta_config');
+      const savedConfig = localStorage.getItem('instalearn_config');
       if (savedConfig) {
         const config = JSON.parse(savedConfig);
         if (typeof config.isRandomClipDurationEnabled === 'boolean') {
@@ -165,7 +165,7 @@ function App() {
   
   const [randomClipDurationRange, setRandomClipDurationRange] = useState(() => {
     try {
-      const savedConfig = localStorage.getItem('youinsta_config');
+      const savedConfig = localStorage.getItem('instalearn_config');
       if (savedConfig) {
         const config = JSON.parse(savedConfig);
         return config.randomClipDurationRange || { min: 1, max: 5 };
@@ -218,7 +218,7 @@ function App() {
   // Video probability settings
   const [studyVideoProbability, setStudyVideoProbability] = useState(() => {
     try {
-      const savedConfig = localStorage.getItem('youinsta_config');
+      const savedConfig = localStorage.getItem('instalearn_config');
       if (savedConfig) {
         const config = JSON.parse(savedConfig);
         return config.studyVideoProbability || 80; // Default 80%
@@ -231,7 +231,7 @@ function App() {
 
   const [relaxVideoProbability, setRelaxVideoProbability] = useState(() => {
     try {
-      const savedConfig = localStorage.getItem('youinsta_config');
+      const savedConfig = localStorage.getItem('instalearn_config');
       if (savedConfig) {
         const config = JSON.parse(savedConfig);
         return config.relaxVideoProbability || 20; // Default 20%
@@ -257,7 +257,7 @@ function App() {
   // Initialize MongoDB service and load configuration
   useEffect(() => {
     const initializeApp = async () => {
-      console.log('🚀 Initializing YouInsta app...');
+      console.log('🚀 Initializing Instalearn app...');
       
       // Initialize MongoDB service
       try {
@@ -296,7 +296,7 @@ function App() {
         console.log('🔄 Auto-loading consolidated study data...');
         try {
           // First try to load from localStorage (consolidated)
-          const savedStudyData = localStorage.getItem('youinsta_study_data');
+          const savedStudyData = localStorage.getItem('instalearn_study_data');
           if (savedStudyData) {
             const parsedStudyData = JSON.parse(savedStudyData);
             if (parsedStudyData && (parsedStudyData.coins || parsedStudyData.watchTime)) {
@@ -363,7 +363,7 @@ function App() {
             console.log(`✅ Loaded ${transformedClips.length} clips from MongoDB`);
           } else {
             // Fallback to localStorage
-            const savedClips = localStorage.getItem('youinsta_clips');
+            const savedClips = localStorage.getItem('instalearn_clips');
             if (savedClips) {
               const parsedClips = JSON.parse(savedClips);
               if (parsedClips && Array.isArray(parsedClips) && parsedClips.length > 0) {
@@ -376,7 +376,7 @@ function App() {
           console.warn('⚠️ Error loading clips:', error);
           // Fallback to localStorage
           try {
-            const savedClips = localStorage.getItem('youinsta_clips');
+            const savedClips = localStorage.getItem('instalearn_clips');
             if (savedClips) {
               const parsedClips = JSON.parse(savedClips);
               if (parsedClips && Array.isArray(parsedClips) && parsedClips.length > 0) {
@@ -421,7 +421,7 @@ function App() {
         
         // Save to localStorage as fallback
         try {
-          localStorage.setItem('youinsta_study_data', JSON.stringify(updatedStudyData));
+          localStorage.setItem('instalearn_study_data', JSON.stringify(updatedStudyData));
           console.log('💾 Study data saved to localStorage as fallback');
         } catch (localStorageError) {
           console.error('Error saving study data to localStorage:', localStorageError);
@@ -457,7 +457,7 @@ function App() {
               lastUpdated: new Date().toDateString()
             }
           };
-          localStorage.setItem('youinsta_study_data', JSON.stringify(updatedStudyData));
+          localStorage.setItem('instalearn_study_data', JSON.stringify(updatedStudyData));
           console.log('💾 Study data saved to localStorage as fallback');
         } catch (localStorageError) {
           console.error('Error saving study data to localStorage:', localStorageError);
@@ -502,7 +502,7 @@ function App() {
         
         // Also save to localStorage as fallback
         try {
-          localStorage.setItem('youinsta_clips', JSON.stringify(clips));
+          localStorage.setItem('instalearn_clips', JSON.stringify(clips));
           console.log(`💾 Saved ${clips.length} clips to localStorage as fallback`);
         } catch (localStorageError) {
           console.error('Error saving clips to localStorage:', localStorageError);
@@ -528,8 +528,8 @@ function App() {
         console.error('Error saving clips:', error);
         // Fallback to localStorage if MongoDB fails
         try {
-          localStorage.setItem('youinsta_clips', JSON.stringify(clips));
-          console.log(`💾 Saved ${clips.length} clips to localStorage as fallback`);
+                  localStorage.setItem('instalearn_clips', JSON.stringify(clips));
+        console.log(`💾 Saved ${clips.length} clips to localStorage as fallback`);
         } catch (localStorageError) {
           console.error('Error saving clips to localStorage:', localStorageError);
         }
@@ -540,6 +540,32 @@ function App() {
       saveClips();
     }
   }, [clips, clipsFileHandle]); // Changed dependency to include full clips array
+
+  // Auto-load videos and calculate time ranges when accessing video-feed page
+  useEffect(() => {
+    const initializeVideoFeed = async () => {
+      if (currentPage === 'video-feed') {
+        console.log('🎬 Video Feed page accessed, initializing...');
+        
+        // Load videos from saved directories if none are loaded
+        if (relaxVideos.length === 0 && studyVideos.length === 0) {
+          console.log('📁 Loading videos from saved directories...');
+          await loadVideosFromSavedDirectories();
+        }
+        
+        // Calculate time ranges if none exist
+        if (videoRanges.length === 0 && (relaxVideos.length > 0 || studyVideos.length > 0)) {
+          console.log('🔄 Calculating time ranges for video feed...');
+          await recalculateTimeRanges();
+        }
+        
+        // Set app as started
+        setIsAppStarted(true);
+      }
+    };
+    
+    initializeVideoFeed();
+  }, [currentPage, relaxVideos.length, studyVideos.length, videoRanges.length]);
 
 
 
@@ -932,7 +958,7 @@ function App() {
     // First, try to load from localStorage (user preferences take priority)
     console.log('🔄 Loading configuration from localStorage (user preferences)...');
     try {
-      const savedConfig = localStorage.getItem('youinsta_config');
+      const savedConfig = localStorage.getItem('instalearn_config');
       if (savedConfig) {
         const config = JSON.parse(savedConfig);
         let loadedCount = 0;
@@ -2027,6 +2053,18 @@ function App() {
       addCoins(1); // Add 1 coin
       console.log(`✅ Added clip as memorized: ${videoWithRanges.video.name} (${currentClip.startTime}s - ${currentClip.endTime}s)`);
     }
+
+    // Regenerate clip queue to filter out memorized clips
+    setTimeout(async () => {
+      const newQueue = await generateClipQueue(3);
+      setClipQueue(prev => ({
+        ...prev,
+        clips: newQueue,
+        currentIndex: 3, // Keep current position
+        preloadedVideos: new Set() // Will be set by generateClipQueue
+      }));
+      console.log('🔄 Regenerated clip queue after memorization change');
+    }, 100);
   };
 
   // Function to remove a clip from clips list
@@ -3190,8 +3228,6 @@ function App() {
     setVideoRanges([]);
     setClipQueue({ clips: [], currentIndex: 0, lastUsed: 0, preloadedVideos: new Set() });
     setIsAppStarted(false);
-    // Navigate back to home page after clearing directories
-    setCurrentPage('home');
   };
 
   // Function to generate random clip duration

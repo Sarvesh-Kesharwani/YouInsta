@@ -2,15 +2,15 @@ import { apiService, UserPreferences } from '../services/api';
 
 // LocalStorage keys mapping
 const LOCALSTORAGE_KEYS = {
-  CONFIG: 'youinsta_config',
-  RELAX_DIRS: 'youinsta_relax_dirs',
-  STUDY_DIRS: 'youinsta_study_dirs',
-  COMBINED_DIR: 'youinsta_combined_dir',
-  CLIPS: 'youinsta_clips',
-  COIN_DATA: 'youinsta_coin_data',
-  VIDEO_RANGES: 'youinsta_video_ranges',
-  CLIP_QUEUE: 'youinsta_clip_queue',
-  APP_STARTED: 'youinsta_app_started'
+  CONFIG: 'instalearn_config',
+  RELAX_DIRS: 'instalearn_relax_dirs',
+  STUDY_DIRS: 'instalearn_study_dirs',
+  COMBINED_DIR: 'instalearn_combined_dir',
+  CLIPS: 'instalearn_clips',
+  COIN_DATA: 'instalearn_coin_data',
+  VIDEO_RANGES: 'instalearn_video_ranges',
+  CLIP_QUEUE: 'instalearn_clip_queue',
+  APP_STARTED: 'instalearn_app_started'
 };
 
 // Migration utility class

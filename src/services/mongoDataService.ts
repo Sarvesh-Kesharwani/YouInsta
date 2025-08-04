@@ -412,7 +412,7 @@ export class MongoDataService {
 
   // LocalStorage fallback methods
   private getConfigFromLocalStorage(): LocalStorageConfig {
-    const configStr = localStorage.getItem('youinsta_config');
+    const configStr = localStorage.getItem('instalearn_config');
     if (configStr) {
       try {
         return JSON.parse(configStr);
@@ -432,11 +432,11 @@ export class MongoDataService {
   private saveConfigToLocalStorage(config: Partial<LocalStorageConfig>): void {
     const existing = this.getConfigFromLocalStorage();
     const updated = { ...existing, ...config };
-    localStorage.setItem('youinsta_config', JSON.stringify(updated));
+          localStorage.setItem('instalearn_config', JSON.stringify(updated));
   }
 
   private getCoinDataFromLocalStorage(): LocalStorageCoinData {
-    const coinDataStr = localStorage.getItem('youinsta_coin_data');
+    const coinDataStr = localStorage.getItem('instalearn_coin_data');
     if (coinDataStr) {
       try {
         return JSON.parse(coinDataStr);
@@ -453,11 +453,11 @@ export class MongoDataService {
   }
 
   private saveCoinDataToLocalStorage(coinData: LocalStorageCoinData): void {
-    localStorage.setItem('youinsta_coin_data', JSON.stringify(coinData));
+          localStorage.setItem('instalearn_coin_data', JSON.stringify(coinData));
   }
 
   private getWatchTimeDataFromLocalStorage(): LocalStorageWatchTimeData {
-    const watchTimeDataStr = localStorage.getItem('youinsta_watch_time_data');
+    const watchTimeDataStr = localStorage.getItem('instalearn_watch_time_data');
     if (watchTimeDataStr) {
       try {
         return JSON.parse(watchTimeDataStr);
@@ -473,11 +473,11 @@ export class MongoDataService {
   }
 
   private saveWatchTimeDataToLocalStorage(watchTimeData: LocalStorageWatchTimeData): void {
-    localStorage.setItem('youinsta_watch_time_data', JSON.stringify(watchTimeData));
+          localStorage.setItem('instalearn_watch_time_data', JSON.stringify(watchTimeData));
   }
 
   private getClipsFromLocalStorage(): Clip[] {
-    const clipsStr = localStorage.getItem('youinsta_clips');
+    const clipsStr = localStorage.getItem('instalearn_clips');
     if (clipsStr) {
       try {
         const clips = JSON.parse(clipsStr);
@@ -519,7 +519,7 @@ export class MongoDataService {
       totalWatchTime: clip.totalWatchTime,
       lastWatchedAt: clip.lastWatchedAt
     }));
-    localStorage.setItem('youinsta_clips', JSON.stringify(transformedClips));
+          localStorage.setItem('instalearn_clips', JSON.stringify(transformedClips));
   }
 
   private addOrUpdateClipInLocalStorage(clip: Clip): void {
@@ -544,9 +544,9 @@ export class MongoDataService {
     studyDirectories: any[];
     combinedDirectory: any;
   } {
-    const relaxDirsStr = localStorage.getItem('youinsta_relax_dirs');
-    const studyDirsStr = localStorage.getItem('youinsta_study_dirs');
-    const combinedDirStr = localStorage.getItem('youinsta_combined_dir');
+    const relaxDirsStr = localStorage.getItem('instalearn_relax_dirs');
+    const studyDirsStr = localStorage.getItem('instalearn_study_dirs');
+    const combinedDirStr = localStorage.getItem('instalearn_combined_dir');
 
     return {
       relaxDirectories: relaxDirsStr ? JSON.parse(relaxDirsStr) : [],
@@ -560,13 +560,13 @@ export class MongoDataService {
     studyDirectories: any[];
     combinedDirectory: any;
   }): void {
-    localStorage.setItem('youinsta_relax_dirs', JSON.stringify(directories.relaxDirectories));
-    localStorage.setItem('youinsta_study_dirs', JSON.stringify(directories.studyDirectories));
-    if (directories.combinedDirectory) {
-      localStorage.setItem('youinsta_combined_dir', JSON.stringify(directories.combinedDirectory));
-    } else {
-      localStorage.removeItem('youinsta_combined_dir');
-    }
+          localStorage.setItem('instalearn_relax_dirs', JSON.stringify(directories.relaxDirectories));
+      localStorage.setItem('instalearn_study_dirs', JSON.stringify(directories.studyDirectories));
+      if (directories.combinedDirectory) {
+        localStorage.setItem('instalearn_combined_dir', JSON.stringify(directories.combinedDirectory));
+      } else {
+        localStorage.removeItem('instalearn_combined_dir');
+      }
   }
 
   private getAppStateFromLocalStorage(): {
@@ -574,9 +574,9 @@ export class MongoDataService {
     videoRanges: any[];
     clipQueue: any;
   } {
-    const appStartedStr = localStorage.getItem('youinsta_app_started');
-    const videoRangesStr = localStorage.getItem('youinsta_video_ranges');
-    const clipQueueStr = localStorage.getItem('youinsta_clip_queue');
+    const appStartedStr = localStorage.getItem('instalearn_app_started');
+    const videoRangesStr = localStorage.getItem('instalearn_video_ranges');
+    const clipQueueStr = localStorage.getItem('instalearn_clip_queue');
 
     return {
       isAppStarted: appStartedStr ? JSON.parse(appStartedStr) : false,
@@ -590,9 +590,9 @@ export class MongoDataService {
     videoRanges: any[];
     clipQueue: any;
   }): void {
-    localStorage.setItem('youinsta_app_started', JSON.stringify(state.isAppStarted));
-    localStorage.setItem('youinsta_video_ranges', JSON.stringify(state.videoRanges));
-    localStorage.setItem('youinsta_clip_queue', JSON.stringify(state.clipQueue));
+          localStorage.setItem('instalearn_app_started', JSON.stringify(state.isAppStarted));
+      localStorage.setItem('instalearn_video_ranges', JSON.stringify(state.videoRanges));
+      localStorage.setItem('instalearn_clip_queue', JSON.stringify(state.clipQueue));
   }
 }
 

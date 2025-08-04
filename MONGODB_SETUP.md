@@ -1,7 +1,7 @@
-# MongoDB Setup Guide for YouInsta
+# MongoDB Setup Guide for Instalearn
 
 ## Overview
-YouInsta now supports MongoDB for data persistence, with automatic fallback to localStorage when MongoDB is not available.
+Instalearn now supports MongoDB for data persistence, with automatic fallback to localStorage when MongoDB is not available.
 
 ## Option 1: Local MongoDB Installation
 
@@ -116,7 +116,7 @@ sudo systemctl enable mongod
    ```bash
    curl http://localhost:5000/api/health
    ```
-   Should return: `{"status":"OK","message":"YouInsta API is running"}`
+   Should return: `{"status":"OK","message":"Instalearn API is running"}`
 
 2. **Check Browser Console**:
    Look for these messages:
@@ -167,7 +167,7 @@ mongosh
 # List databases
 show dbs
 
-# Use YouInsta database
+# Use Instalearn database
 use youinsta
 
 # Show collections

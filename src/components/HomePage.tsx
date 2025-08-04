@@ -70,6 +70,22 @@ const HomePage: React.FC<HomePageProps> = ({
 }) => {
   return (
     <div className="home-page">
+      {/* Quick Start Button */}
+      <div className="quick-start-section">
+        <button 
+          className="start-button"
+          onClick={onStartApp}
+          disabled={!canStartApp}
+        >
+          🚀 Start Scrolling Experience
+        </button>
+        {!canStartApp && (
+          <p className="start-hint">
+            Upload some videos first to get started!
+          </p>
+        )}
+      </div>
+
       {/* Coin Display */}
       <div className="home-coin-display">
         <div className="coin-info">
@@ -279,49 +295,8 @@ const HomePage: React.FC<HomePageProps> = ({
         </div>
       </div>
 
-      {/* Welcome Section */}
-      <div className="welcome-section">
-        <h1>Welcome to YouInsta</h1>
-        <p>Your personalized video learning experience</p>
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">📚</div>
-            <h3>Study Mode</h3>
-            <p>Focus on educational content with intelligent clip generation</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🎬</div>
-            <h3>Relax Mode</h3>
-            <p>Enjoy entertainment content for breaks and relaxation</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🧠</div>
-            <h3>Memory Tracking</h3>
-            <p>Track your progress and memorize important clips</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🪙</div>
-            <h3>Reward System</h3>
-            <p>Earn coins for completing clips and answering quizzes</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Quick Start Button */}
-      <div className="quick-start-section">
-        <button 
-          className="start-button"
-          onClick={onStartApp}
-          disabled={!canStartApp}
-        >
-          🚀 Start Scrolling Experience
-        </button>
-        {!canStartApp && (
-          <p className="start-hint">
-            Upload some videos first to get started!
-          </p>
-        )}
-      </div>
+
     </div>
   );
 };
