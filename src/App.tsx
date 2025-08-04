@@ -2642,6 +2642,49 @@ function App() {
           setRelaxVideos(relaxVideos);
           setStudyVideos(studyVideos);
           
+          // Immediately add new videos to videoData
+          console.log(`📹 Loading ${relaxVideos.length + studyVideos.length} videos from saved directory, adding to videoData...`);
+          const newVideoData: VideoData[] = [];
+          
+          relaxVideos.forEach(video => {
+            newVideoData.push({
+              id: video.id,
+              name: video.name,
+              category: 'relax',
+              duration: 0, // Will be updated when video duration is available
+              memorizedRanges: [],
+              totalMemorizedTime: 0,
+              memorizedPercentage: 0,
+              lastUpdated: new Date().toDateString()
+            });
+          });
+          
+          studyVideos.forEach(video => {
+            newVideoData.push({
+              id: video.id,
+              name: video.name,
+              category: 'study',
+              duration: 0, // Will be updated when video duration is available
+              memorizedRanges: [],
+              totalMemorizedTime: 0,
+              memorizedPercentage: 0,
+              lastUpdated: new Date().toDateString()
+            });
+          });
+          
+          setVideoData(prevVideoData => {
+            // Filter out any existing videos with the same IDs to avoid duplicates
+            const existingIds = new Set(prevVideoData.map(vd => vd.id));
+            const uniqueNewVideos = newVideoData.filter(video => !existingIds.has(video.id));
+            
+            if (uniqueNewVideos.length > 0) {
+              console.log(`📹 Added ${uniqueNewVideos.length} new videos to videoData from saved directory:`, uniqueNewVideos.map(v => v.name));
+              return [...prevVideoData, ...uniqueNewVideos];
+            }
+            
+            return prevVideoData;
+          });
+          
           // Load clips and coin data if found
           if (loadedMemorizedClips.length > 0) {
             setClips(loadedMemorizedClips);
@@ -2782,6 +2825,49 @@ function App() {
       // Update the appropriate video state
       setRelaxVideos(relaxVideos);
       setStudyVideos(studyVideos);
+      
+      // Immediately add new videos to videoData
+      console.log(`📹 Loading ${relaxVideos.length + studyVideos.length} videos from individual directories, adding to videoData...`);
+      const newVideoData: VideoData[] = [];
+      
+      relaxVideos.forEach(video => {
+        newVideoData.push({
+          id: video.id,
+          name: video.name,
+          category: 'relax',
+          duration: 0, // Will be updated when video duration is available
+          memorizedRanges: [],
+          totalMemorizedTime: 0,
+          memorizedPercentage: 0,
+          lastUpdated: new Date().toDateString()
+        });
+      });
+      
+      studyVideos.forEach(video => {
+        newVideoData.push({
+          id: video.id,
+          name: video.name,
+          category: 'study',
+          duration: 0, // Will be updated when video duration is available
+          memorizedRanges: [],
+          totalMemorizedTime: 0,
+          memorizedPercentage: 0,
+          lastUpdated: new Date().toDateString()
+        });
+      });
+      
+      setVideoData(prevVideoData => {
+        // Filter out any existing videos with the same IDs to avoid duplicates
+        const existingIds = new Set(prevVideoData.map(vd => vd.id));
+        const uniqueNewVideos = newVideoData.filter(video => !existingIds.has(video.id));
+        
+        if (uniqueNewVideos.length > 0) {
+          console.log(`📹 Added ${uniqueNewVideos.length} new videos to videoData from individual directories:`, uniqueNewVideos.map(v => v.name));
+          return [...prevVideoData, ...uniqueNewVideos];
+        }
+        
+        return prevVideoData;
+      });
       
       // Mark app as started when videos are loaded
       if (relaxVideos.length > 0 || studyVideos.length > 0) {
@@ -3131,6 +3217,49 @@ function App() {
         setCombinedDirectory(dirInfo);
         setRelaxVideos(relaxVideos);
         setStudyVideos(studyVideos);
+        
+        // Immediately add new videos to videoData
+        console.log(`📹 Loading ${relaxVideos.length + studyVideos.length} videos, adding to videoData...`);
+        const newVideoData: VideoData[] = [];
+        
+        relaxVideos.forEach(video => {
+          newVideoData.push({
+            id: video.id,
+            name: video.name,
+            category: 'relax',
+            duration: 0, // Will be updated when video duration is available
+            memorizedRanges: [],
+            totalMemorizedTime: 0,
+            memorizedPercentage: 0,
+            lastUpdated: new Date().toDateString()
+          });
+        });
+        
+        studyVideos.forEach(video => {
+          newVideoData.push({
+            id: video.id,
+            name: video.name,
+            category: 'study',
+            duration: 0, // Will be updated when video duration is available
+            memorizedRanges: [],
+            totalMemorizedTime: 0,
+            memorizedPercentage: 0,
+            lastUpdated: new Date().toDateString()
+          });
+        });
+        
+        setVideoData(prevVideoData => {
+          // Filter out any existing videos with the same IDs to avoid duplicates
+          const existingIds = new Set(prevVideoData.map(vd => vd.id));
+          const uniqueNewVideos = newVideoData.filter(video => !existingIds.has(video.id));
+          
+          if (uniqueNewVideos.length > 0) {
+            console.log(`📹 Added ${uniqueNewVideos.length} new videos to videoData:`, uniqueNewVideos.map(v => v.name));
+            return [...prevVideoData, ...uniqueNewVideos];
+          }
+          
+          return prevVideoData;
+        });
         
         // Load clips and coin data if found
         if (loadedMemorizedClips.length > 0) {

@@ -185,7 +185,7 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
                 ))}
               </div>
             ) : (
-              <p className="no-videos">No videos yet. Start the app and videos will be added as you mark clips as memorized!</p>
+              <p className="no-videos">No videos loaded yet. Upload videos using the "Upload Combined Directory" button to see them here!</p>
             )}
           </>
         )}
