@@ -85,55 +85,47 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
 
              {/* Videos Section */}
        <div className="videos-section">
-         <div className="videos-section-header">
-           <h2>🎬 Videos ({videoData.length})</h2>
-           <button 
-             className="toggle-videos-btn"
-             onClick={() => setIsVideosListExpanded(!isVideosListExpanded)}
-             title={isVideosListExpanded ? "Collapse videos list" : "Expand videos list"}
-           >
-             {isVideosListExpanded ? '🔽' : '▶️'}
-           </button>
-         </div>
+                   <div className="videos-section-header">
+            <h2>🎬 Study Videos ({videoData.filter(v => v.category === 'study').length})</h2>
+            <button 
+              className="toggle-videos-btn"
+              onClick={() => setIsVideosListExpanded(!isVideosListExpanded)}
+              title={isVideosListExpanded ? "Collapse videos list" : "Expand videos list"}
+            >
+              {isVideosListExpanded ? '🔽' : '▶️'}
+            </button>
+          </div>
          
-         {/* Videos Statistics */}
-         {videoData.length > 0 && (
-           <div className="videos-statistics">
-             <h3>📊 Videos Statistics</h3>
-             <div className="stats-grid">
-               <div className="stat-card">
-                 <div className="stat-number">{videoData.length}</div>
-                 <div className="stat-label">Total Videos</div>
-               </div>
-               <div className="stat-card">
-                 <div className="stat-number">{videoData.filter(v => v.category === 'study').length}</div>
-                 <div className="stat-label">Study Videos</div>
-               </div>
-               <div className="stat-card">
-                 <div className="stat-number">{videoData.filter(v => v.category === 'relax').length}</div>
-                 <div className="stat-label">Relax Videos</div>
-               </div>
-               <div className="stat-card">
-                 <div className="stat-number">
-                   {videoData.filter(v => v.memorizedRanges.length > 0).length}
-                 </div>
-                 <div className="stat-label">Videos with Memorized Segments</div>
-               </div>
-               <div className="stat-card">
-                 <div className="stat-number">
-                   {Math.round(videoData.reduce((sum, v) => sum + v.memorizedPercentage, 0) / videoData.length || 0)}%
-                 </div>
-                 <div className="stat-label">Average Memorization</div>
-               </div>
-               <div className="stat-card">
-                 <div className="stat-number">
-                   {Math.round(videoData.reduce((sum, v) => sum + v.totalMemorizedTime, 0) / 60)} min
-                 </div>
-                 <div className="stat-label">Total Memorized Time</div>
-               </div>
-             </div>
-           </div>
-         )}
+                   {/* Videos Statistics */}
+          {videoData.filter(v => v.category === 'study').length > 0 && (
+            <div className="videos-statistics">
+              <h3>📊 Study Videos Statistics</h3>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-number">{videoData.filter(v => v.category === 'study').length}</div>
+                  <div className="stat-label">Study Videos</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-number">
+                    {videoData.filter(v => v.category === 'study' && v.memorizedRanges.length > 0).length}
+                  </div>
+                  <div className="stat-label">Videos with Memorized Segments</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-number">
+                    {Math.round(videoData.filter(v => v.category === 'study').reduce((sum, v) => sum + v.memorizedPercentage, 0) / videoData.filter(v => v.category === 'study').length || 0)}%
+                  </div>
+                  <div className="stat-label">Average Memorization</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-number">
+                    {Math.round(videoData.filter(v => v.category === 'study').reduce((sum, v) => sum + v.totalMemorizedTime, 0) / 60)} min
+                  </div>
+                  <div className="stat-label">Total Memorized Time</div>
+                </div>
+              </div>
+            </div>
+          )}
         
         {isVideosListExpanded && (
           <>
@@ -181,10 +173,10 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
                </button>
              </div>
 
-            {/* Videos List */}
-            {videoData.length > 0 ? (
-              <div className="videos-list">
-                {videoData.map((video) => (
+                         {/* Videos List */}
+             {videoData.filter(v => v.category === 'study').length > 0 ? (
+               <div className="videos-list">
+                 {videoData.filter(v => v.category === 'study').map((video) => (
                   <div key={video.id} className="video-item">
                     <div className="video-info">
                       <div className="video-header">
@@ -232,9 +224,9 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="no-videos">No videos loaded yet. Upload videos using the "Upload Combined Directory" button to see them here!</p>
-            )}
+                         ) : (
+               <p className="no-videos">No study videos loaded yet. Upload study videos using the "Upload Combined Directory" button to see them here!</p>
+             )}
           </>
         )}
       </div>
