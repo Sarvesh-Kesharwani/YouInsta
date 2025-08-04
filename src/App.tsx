@@ -2374,6 +2374,29 @@ function App() {
   };
 
   // Function to remove duplicate clips based on videoName, startTime, and endTime
+  const removeDuplicateVideos = () => {
+    setVideoData(prevVideoData => {
+      const uniqueVideos = new Map<string, VideoData>();
+      
+      prevVideoData.forEach(video => {
+        // Use video name as the unique key to prevent duplicates
+        if (!uniqueVideos.has(video.name)) {
+          uniqueVideos.set(video.name, video);
+        } else {
+          console.log(`🗑️ Removed duplicate video: ${video.name}`);
+        }
+      });
+      
+      const deduplicatedVideos = Array.from(uniqueVideos.values());
+      
+      if (deduplicatedVideos.length !== prevVideoData.length) {
+        console.log(`🧹 Removed ${prevVideoData.length - deduplicatedVideos.length} duplicate videos`);
+      }
+      
+      return deduplicatedVideos;
+    });
+  };
+
   const removeDuplicateClips = async () => {
     try {
       console.log('🔍 Starting duplicate removal process...');
@@ -3256,6 +3279,8 @@ function App() {
           if (uniqueNewVideos.length > 0) {
             console.log(`📹 Added ${uniqueNewVideos.length} new videos to videoData:`, uniqueNewVideos.map(v => v.name));
             return [...prevVideoData, ...uniqueNewVideos];
+          } else {
+            console.log(`📹 No new videos to add (all ${newVideoData.length} videos already exist)`);
           }
           
           return prevVideoData;
@@ -4122,6 +4147,7 @@ function App() {
                 onLoadVideosDataFromFile={loadVideosDataFromFile}
                 onSaveVideosDataToFile={saveVideosDataToFile}
                 onCreateSampleVideosDataFile={createSampleVideosDataFile}
+                onRemoveDuplicateVideos={removeDuplicateVideos}
               />
             )}
           </div>

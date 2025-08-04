@@ -49,6 +49,7 @@ interface ClipsPageProps {
   onLoadVideosDataFromFile: () => void;
   onSaveVideosDataToFile: () => void;
   onCreateSampleVideosDataFile: () => void;
+  onRemoveDuplicateVideos: () => void;
 }
 
 const ClipsPage: React.FC<ClipsPageProps> = ({
@@ -70,7 +71,8 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
   videosFileHandle,
   onLoadVideosDataFromFile,
   onSaveVideosDataToFile,
-  onCreateSampleVideosDataFile
+  onCreateSampleVideosDataFile,
+  onRemoveDuplicateVideos
 }) => {
   const [isClipsListExpanded, setIsClipsListExpanded] = useState(true);
   const [isVideosListExpanded, setIsVideosListExpanded] = useState(true);
@@ -81,18 +83,57 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
         <p>Manage your watched and memorized video clips</p>
       </div>
 
-      {/* Videos Section */}
-      <div className="videos-section">
-        <div className="videos-section-header">
-          <h2>🎬 Videos ({videoData.length})</h2>
-          <button 
-            className="toggle-videos-btn"
-            onClick={() => setIsVideosListExpanded(!isVideosListExpanded)}
-            title={isVideosListExpanded ? "Collapse videos list" : "Expand videos list"}
-          >
-            {isVideosListExpanded ? '🔽' : '▶️'}
-          </button>
-        </div>
+             {/* Videos Section */}
+       <div className="videos-section">
+         <div className="videos-section-header">
+           <h2>🎬 Videos ({videoData.length})</h2>
+           <button 
+             className="toggle-videos-btn"
+             onClick={() => setIsVideosListExpanded(!isVideosListExpanded)}
+             title={isVideosListExpanded ? "Collapse videos list" : "Expand videos list"}
+           >
+             {isVideosListExpanded ? '🔽' : '▶️'}
+           </button>
+         </div>
+         
+         {/* Videos Statistics */}
+         {videoData.length > 0 && (
+           <div className="videos-statistics">
+             <h3>📊 Videos Statistics</h3>
+             <div className="stats-grid">
+               <div className="stat-card">
+                 <div className="stat-number">{videoData.length}</div>
+                 <div className="stat-label">Total Videos</div>
+               </div>
+               <div className="stat-card">
+                 <div className="stat-number">{videoData.filter(v => v.category === 'study').length}</div>
+                 <div className="stat-label">Study Videos</div>
+               </div>
+               <div className="stat-card">
+                 <div className="stat-number">{videoData.filter(v => v.category === 'relax').length}</div>
+                 <div className="stat-label">Relax Videos</div>
+               </div>
+               <div className="stat-card">
+                 <div className="stat-number">
+                   {videoData.filter(v => v.memorizedRanges.length > 0).length}
+                 </div>
+                 <div className="stat-label">Videos with Memorized Segments</div>
+               </div>
+               <div className="stat-card">
+                 <div className="stat-number">
+                   {Math.round(videoData.reduce((sum, v) => sum + v.memorizedPercentage, 0) / videoData.length || 0)}%
+                 </div>
+                 <div className="stat-label">Average Memorization</div>
+               </div>
+               <div className="stat-card">
+                 <div className="stat-number">
+                   {Math.round(videoData.reduce((sum, v) => sum + v.totalMemorizedTime, 0) / 60)} min
+                 </div>
+                 <div className="stat-label">Total Memorized Time</div>
+               </div>
+             </div>
+           </div>
+         )}
         
         {isVideosListExpanded && (
           <>
@@ -108,30 +149,37 @@ const ClipsPage: React.FC<ClipsPageProps> = ({
               )}
             </div>
             
-            {/* Video File Management Buttons */}
-            <div className="videos-file-buttons">
-              <button 
-                className="load-videos-btn"
-                onClick={onLoadVideosDataFromFile}
-                title="Load video data from file"
-              >
-                📂 Load from File
-              </button>
-              <button 
-                className="save-videos-btn"
-                onClick={onSaveVideosDataToFile}
-                title="Save video data to file"
-              >
-                💾 Save to File
-              </button>
-              <button 
-                className="create-sample-videos-btn"
-                onClick={onCreateSampleVideosDataFile}
-                title="Create a sample videos.json file"
-              >
-                📝 Create Sample File
-              </button>
-            </div>
+                         {/* Video File Management Buttons */}
+             <div className="videos-file-buttons">
+               <button 
+                 className="load-videos-btn"
+                 onClick={onLoadVideosDataFromFile}
+                 title="Load video data from file"
+               >
+                 📂 Load from File
+               </button>
+               <button 
+                 className="save-videos-btn"
+                 onClick={onSaveVideosDataToFile}
+                 title="Save video data to file"
+               >
+                 💾 Save to File
+               </button>
+               <button 
+                 className="create-sample-videos-btn"
+                 onClick={onCreateSampleVideosDataFile}
+                 title="Create a sample videos.json file"
+               >
+                 📝 Create Sample File
+               </button>
+               <button 
+                 className="remove-duplicates-videos-btn"
+                 onClick={onRemoveDuplicateVideos}
+                 title="Remove duplicate videos based on video name"
+               >
+                 🗑️ Remove Duplicates
+               </button>
+             </div>
 
             {/* Videos List */}
             {videoData.length > 0 ? (

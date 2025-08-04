@@ -1,0 +1,5 @@
+[33mcd3c5f4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mversion0.1[m[33m, [m[1;31morigin/version0.1[m[33m)[m fix: Show loaded videos immediately in videos section
+[33m04cb53b[m fix: Auto-add new videos to videoData when uploaded via combined directory
+[33m59851d0[m feat: Add videos section to Clips page with progress tracking and auto-save/load
+[33mdf670f6[m Rename app from YouInsta to Instalearn - Update branding across all components, documentation, and localStorage keys - Fix video feed auto-initialization and memorized clip filtering - Improve relax clip auto-scroll behavior - Remove double icons from sidebar - Move start scrolling button to top of home page - Remove welcome section for cleaner UI - Add memorized button for study videos only - Prevent redirection after clearing directories
+[33mb3927aa[m feat: implement consolidated study data system with auto-save/load
