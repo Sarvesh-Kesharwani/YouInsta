@@ -11,22 +11,38 @@ interface WatchTimeData {
   }[];
 }
 
-interface CoinData {
-  totalCoins: number;
-  earnedToday: number;
-  date: string;
-  history: {
+interface StudyData {
+  coins: {
+    totalCoins: number;
+    earnedToday: number;
     date: string;
-    coins: number;
-  }[];
+    history: {
+      date: string;
+      coins: number;
+    }[];
+  };
+  watchTime: {
+    totalMinutes: number;
+    date: string;
+    history: {
+      date: string;
+      minutes: number;
+    }[];
+  };
+  studyProgress: {
+    minutesWatchedToday: number;
+    totalMinutesAvailable: number;
+    progressPercentage: number;
+    lastUpdated: string;
+  };
 }
 
 interface HomePageProps {
-  coinData: CoinData;
+  coinData: StudyData;
   onLoadCoinDataFromFile: () => void;
   onSaveCoinDataToFile: () => void;
   onCreateSampleCoinDataFile: () => void;
-  watchTimeData: WatchTimeData;
+  watchTimeData: StudyData['watchTime'];
   onLoadWatchTimeDataFromFile: () => void;
   onSaveWatchTimeDataToFile: () => void;
   onCreateSampleWatchTimeDataFile: () => void;
@@ -58,14 +74,14 @@ const HomePage: React.FC<HomePageProps> = ({
       <div className="home-coin-display">
         <div className="coin-info">
           <div className="coin-count">
-            🪙 {coinData.totalCoins} Coins
+            🪙 {coinData.coins.totalCoins} Coins
           </div>
           <div className="coin-earned-today">
-            Today: +{coinData.earnedToday}
+            Today: +{coinData.coins.earnedToday}
           </div>
         </div>
         <div className="coin-history">
-          {coinData.history.slice(-3).map((entry, index) => (
+          {coinData.coins.history.slice(-3).map((entry, index) => (
             <div key={index} className="history-entry">
               {entry.date}: +{entry.coins}
             </div>
@@ -76,7 +92,7 @@ const HomePage: React.FC<HomePageProps> = ({
         <div className="coin-chart-container">
           <h3>📈 Daily Coin Earnings</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={coinData.history.slice(-7)} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                         <LineChart data={coinData.coins.history.slice(-7)} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
               <XAxis 
                 dataKey="date" 

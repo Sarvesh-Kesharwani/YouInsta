@@ -56,6 +56,14 @@ export interface UserPreferences {
       timestamp: Date;
     }>;
   };
+  watchTimeData?: {
+    totalMinutes: number;
+    date: string;
+    history: Array<{
+      date: string;
+      minutes: number;
+    }>;
+  };
   createdAt: Date;
   updatedAt: Date;
 }

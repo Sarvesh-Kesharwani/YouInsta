@@ -66,23 +66,30 @@ interface DirectoryInfo {
   handle?: any; // Store the directory handle for persistence
 }
 
-export interface CoinData {
-  totalCoins: number;
-  earnedToday: number;
-  date: string;
-  history: {
+export interface StudyData {
+  coins: {
+    totalCoins: number;
+    earnedToday: number;
     date: string;
-    coins: number;
-  }[];
-}
-
-export interface WatchTimeData {
-  totalMinutes: number;
-  date: string;
-  history: {
+    history: {
+      date: string;
+      coins: number;
+    }[];
+  };
+  watchTime: {
+    totalMinutes: number;
     date: string;
-    minutes: number;
-  }[];
+    history: {
+      date: string;
+      minutes: number;
+    }[];
+  };
+  studyProgress: {
+    minutesWatchedToday: number;
+    totalMinutesAvailable: number;
+    progressPercentage: number;
+    lastUpdated: string;
+  };
 }
 
 function App() {
@@ -99,17 +106,24 @@ function App() {
   });
   const [isAppStarted, setIsAppStarted] = useState(false);
   const [clips, setClips] = useState<ClipEntry[]>([]);
-  const [coinData, setCoinData] = useState<CoinData>({
-    totalCoins: 0,
-    earnedToday: 0,
-    date: new Date().toDateString(),
-    history: []
-  });
-  
-  const [watchTimeData, setWatchTimeData] = useState<WatchTimeData>({
-    totalMinutes: 0,
-    date: new Date().toDateString(),
-    history: []
+  const [coinData, setCoinData] = useState<StudyData>({
+    coins: {
+      totalCoins: 0,
+      earnedToday: 0,
+      date: new Date().toDateString(),
+      history: []
+    },
+    watchTime: {
+      totalMinutes: 0,
+      date: new Date().toDateString(),
+      history: []
+    },
+    studyProgress: {
+      minutesWatchedToday: 0,
+      totalMinutesAvailable: 0,
+      progressPercentage: 0,
+      lastUpdated: new Date().toDateString()
+    }
   });
   
   // Directory persistence
@@ -277,75 +291,152 @@ function App() {
           console.log('Found saved directories, loading videos...');
           await loadVideosFromSavedDirectories();
         }
-        
+
+        // Auto-load consolidated study data
+        console.log('🔄 Auto-loading consolidated study data...');
+        try {
+          // First try to load from localStorage (consolidated)
+          const savedStudyData = localStorage.getItem('youinsta_study_data');
+          if (savedStudyData) {
+            const parsedStudyData = JSON.parse(savedStudyData);
+            if (parsedStudyData && (parsedStudyData.coins || parsedStudyData.watchTime)) {
+              setCoinData(parsedStudyData);
+              console.log('✅ Consolidated study data auto-loaded from localStorage');
+            }
+          } else {
+            // Fallback to separate MongoDB loading
+            try {
+              const mongoCoinData = await mongoDataService.getCoinData();
+              const mongoWatchTimeData = await mongoDataService.getWatchTimeData();
+              
+              if (mongoCoinData && (mongoCoinData.totalCoins > 0 || mongoCoinData.history.length > 0)) {
+                setCoinData(prev => ({
+                  ...prev,
+                  coins: {
+                    totalCoins: mongoCoinData.totalCoins,
+                    earnedToday: mongoCoinData.earnedToday,
+                    date: mongoCoinData.date,
+                    history: mongoCoinData.history
+                  }
+                }));
+                console.log('✅ Coin data auto-loaded from MongoDB');
+              }
+              
+              if (mongoWatchTimeData && (mongoWatchTimeData.totalMinutes > 0 || mongoWatchTimeData.history.length > 0)) {
+                setCoinData(prev => ({
+                  ...prev,
+                  watchTime: {
+                    ...prev.watchTime,
+                    totalMinutes: mongoWatchTimeData.totalMinutes,
+                    history: mongoWatchTimeData.history
+                  }
+                }));
+                console.log('✅ Watch time data auto-loaded from MongoDB');
+              }
+            } catch (mongoError) {
+              console.warn('⚠️ Error loading from MongoDB:', mongoError);
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Error auto-loading study data:', error);
+        }
+
         // Load clips
-        const clips = await mongoDataService.getClips();
-        setClips(clips.map(clip => ({
-          id: clip._id || Math.random().toString(36).substr(2, 9),
-          videoName: clip.videoName,
-          startTime: clip.startTime,
-          endTime: clip.endTime,
-          category: clip.directoryType,
-          memorized: clip.isMemorized,
-          watched: clip.isWatched,
-          watchPercentage: clip.watchPercentage,
-          quizStatus: 'not_yet_answered' as const,
-          lastWatchedAt: clip.lastWatchedAt ? new Date(clip.lastWatchedAt).getTime() : undefined,
-          totalWatchTime: clip.totalWatchTime
-        })));
-        console.log(`Loaded ${clips.length} clips`);
-        
-        // Load coin data
-        const coinData = await mongoDataService.getCoinData();
-        setCoinData(coinData);
-        console.log(`Loaded coin data: ${coinData.totalCoins} total coins, ${coinData.earnedToday} earned today`);
-        
-        // Load app state
-        const appState = await mongoDataService.getAppState();
-        setIsAppStarted(appState.isAppStarted);
-        setVideoRanges(appState.videoRanges);
-        setClipQueue({
-          clips: appState.clipQueue.clips.map((clip: any) => ({
-            id: Math.random().toString(36).substr(2, 9),
-            file: new File([], clip.videoName),
-            url: '',
-            name: clip.videoName,
-            startTime: clip.startTime,
-            endTime: clip.endTime,
-            isClip: true
-          })),
-          currentIndex: appState.clipQueue.currentIndex,
-          lastUsed: appState.clipQueue.lastUsed,
-          preloadedVideos: new Set(appState.clipQueue.preloadedVideos)
-        });
-        
+        try {
+          const mongoClips = await mongoDataService.getClips();
+          if (mongoClips && mongoClips.length > 0) {
+            // Transform MongoDB clips back to ClipEntry format
+            const transformedClips: ClipEntry[] = mongoClips.map((mongoClip: any) => ({
+              id: mongoClip._id,
+              videoName: mongoClip.videoName,
+              startTime: mongoClip.startTime,
+              endTime: mongoClip.endTime,
+              category: mongoClip.directoryType,
+              memorized: mongoClip.isMemorized,
+              watched: mongoClip.isWatched,
+              watchPercentage: mongoClip.watchPercentage || 0,
+              quizStatus: 'not_yet_answered', // Default value
+              lastWatchedAt: mongoClip.lastWatchedAt ? new Date(mongoClip.lastWatchedAt).getTime() : undefined,
+              totalWatchTime: mongoClip.totalWatchTime || 0
+            }));
+            setClips(transformedClips);
+            console.log(`✅ Loaded ${transformedClips.length} clips from MongoDB`);
+          } else {
+            // Fallback to localStorage
+            const savedClips = localStorage.getItem('youinsta_clips');
+            if (savedClips) {
+              const parsedClips = JSON.parse(savedClips);
+              if (parsedClips && Array.isArray(parsedClips) && parsedClips.length > 0) {
+                setClips(parsedClips);
+                console.log(`✅ Loaded ${parsedClips.length} clips from localStorage`);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Error loading clips:', error);
+          // Fallback to localStorage
+          try {
+            const savedClips = localStorage.getItem('youinsta_clips');
+            if (savedClips) {
+              const parsedClips = JSON.parse(savedClips);
+              if (parsedClips && Array.isArray(parsedClips) && parsedClips.length > 0) {
+                setClips(parsedClips);
+                console.log(`✅ Loaded ${parsedClips.length} clips from localStorage fallback`);
+              }
+            }
+          } catch (localStorageError) {
+            console.error('Error loading clips from localStorage:', localStorageError);
+          }
+        }
+
         console.log('✅ All saved data loaded successfully');
       } catch (error) {
         console.error('Error loading saved data:', error);
       }
     };
     
-    // Only load data once after initialization
     loadSavedData();
   }, []); // Empty dependency array to run only once
 
-  // Update coin data whenever it changes
+  // Auto-save consolidated study data whenever it changes
   useEffect(() => {
-    const saveCoinData = async () => {
+    const saveStudyData = async () => {
       try {
-        await mongoDataService.saveCoinData(coinData);
-        console.log('💾 Coin data saved to MongoDB');
+        // Update study progress with current values
+        const currentProgress = calculateDailyWatchingProgress();
+        const updatedStudyData = {
+          ...coinData,
+          studyProgress: {
+            minutesWatchedToday: currentProgress.minutesWatchedToday,
+            totalMinutesAvailable: currentProgress.totalMinutesAvailable,
+            progressPercentage: currentProgress.progressPercentage,
+            lastUpdated: new Date().toDateString()
+          }
+        };
+
+        // Save to MongoDB
+        await mongoDataService.saveCoinData(updatedStudyData.coins);
+        await mongoDataService.saveWatchTimeData(updatedStudyData.watchTime);
+        console.log('💾 Study data saved to MongoDB');
         
-        // Also save to JSON file if we have a file handle
-        if (coinsFileHandle && (coinData.totalCoins > 0 || coinData.history.length > 0)) {
+        // Save to localStorage as fallback
+        try {
+          localStorage.setItem('youinsta_study_data', JSON.stringify(updatedStudyData));
+          console.log('💾 Study data saved to localStorage as fallback');
+        } catch (localStorageError) {
+          console.error('Error saving study data to localStorage:', localStorageError);
+        }
+        
+        // Save to consolidated coins.json file if we have a file handle
+        if (coinsFileHandle) {
           const saveToFile = async () => {
             try {
               const writable = await coinsFileHandle.createWritable();
-              await writable.write(JSON.stringify(coinData, null, 2));
+              await writable.write(JSON.stringify(updatedStudyData, null, 2));
               await writable.close();
-              console.log('✅ Automatically saved coin data to JSON file');
+              console.log('✅ Automatically saved consolidated study data to coins.json');
             } catch (error) {
-              console.error('❌ Error auto-saving coin data to file:', error);
+              console.error('❌ Error auto-saving study data to file:', error);
               // Clear the file handle if there's an error
               setCoinsFileHandle(null);
             }
@@ -353,14 +444,34 @@ function App() {
           saveToFile();
         }
       } catch (error) {
-        console.error('Error saving coin data:', error);
+        console.error('Error saving study data:', error);
+        // Fallback to localStorage only
+        try {
+          const currentProgress = calculateDailyWatchingProgress();
+          const updatedStudyData = {
+            ...coinData,
+            studyProgress: {
+              minutesWatchedToday: currentProgress.minutesWatchedToday,
+              totalMinutesAvailable: currentProgress.totalMinutesAvailable,
+              progressPercentage: currentProgress.progressPercentage,
+              lastUpdated: new Date().toDateString()
+            }
+          };
+          localStorage.setItem('youinsta_study_data', JSON.stringify(updatedStudyData));
+          console.log('💾 Study data saved to localStorage as fallback');
+        } catch (localStorageError) {
+          console.error('Error saving study data to localStorage:', localStorageError);
+        }
       }
     };
-    // Only save if coinData has meaningful changes
-    if (coinData.totalCoins > 0 || coinData.history.length > 0) {
-      saveCoinData();
+    
+    // Save whenever any part of the study data changes
+    if (coinData.coins.totalCoins > 0 || coinData.coins.history.length > 0 || 
+        coinData.watchTime.totalMinutes > 0 || coinData.watchTime.history.length > 0) {
+      saveStudyData();
     }
-  }, [coinData.totalCoins, coinData.earnedToday, coinData.history.length, coinsFileHandle]);
+  }, [coinData.coins.totalCoins, coinData.coins.earnedToday, coinData.coins.history.length, 
+      coinData.watchTime.totalMinutes, coinData.watchTime.history.length, coinsFileHandle]);
 
   // Update clips whenever they change
   useEffect(() => {
@@ -388,6 +499,14 @@ function App() {
         
         await mongoDataService.saveClips(mongoClips);
         console.log(`💾 Saved ${clips.length} clips to MongoDB`);
+        
+        // Also save to localStorage as fallback
+        try {
+          localStorage.setItem('youinsta_clips', JSON.stringify(clips));
+          console.log(`💾 Saved ${clips.length} clips to localStorage as fallback`);
+        } catch (localStorageError) {
+          console.error('Error saving clips to localStorage:', localStorageError);
+        }
         
         // Also save to JSON file if we have a file handle
         if (clipsFileHandle && clips.length > 0) {
@@ -422,35 +541,7 @@ function App() {
     }
   }, [clips, clipsFileHandle]); // Changed dependency to include full clips array
 
-  // Auto-save watch time data whenever it changes
-  useEffect(() => {
-    const saveWatchTimeData = async () => {
-      try {
-        // Save to JSON file if we have a file handle
-        if (watchTimeFileHandle && (watchTimeData.totalMinutes > 0 || watchTimeData.history.length > 0)) {
-          const saveToFile = async () => {
-            try {
-              const writable = await watchTimeFileHandle.createWritable();
-              await writable.write(JSON.stringify(watchTimeData, null, 2));
-              await writable.close();
-              console.log('✅ Automatically saved watch time data to JSON file');
-            } catch (error) {
-              console.error('❌ Error auto-saving watch time data to file:', error);
-              // Clear the file handle if there's an error
-              setWatchTimeFileHandle(null);
-            }
-          };
-          saveToFile();
-        }
-      } catch (error) {
-        console.error('Error saving watch time data:', error);
-      }
-    };
-    
-    if (watchTimeData.totalMinutes > 0 || watchTimeData.history.length > 0) {
-      saveWatchTimeData();
-    }
-  }, [watchTimeData.totalMinutes, watchTimeData.history.length, watchTimeFileHandle]);
+
 
 
   // Save directories whenever they change
@@ -682,14 +773,27 @@ function App() {
   // Function to create sample coin data file
   const createSampleCoinDataFile = async () => {
     try {
-      const sampleData: CoinData = {
-        totalCoins: 15,
-        earnedToday: 5,
-        date: new Date().toDateString(),
-        history: [
-          { date: new Date().toDateString(), coins: 5 },
-          { date: new Date(Date.now() - 86400000).toDateString(), coins: 10 }
-        ]
+      const sampleData: StudyData = {
+        coins: {
+          totalCoins: 15,
+          earnedToday: 5,
+          date: new Date().toDateString(),
+          history: [
+            { date: new Date().toDateString(), coins: 5 },
+            { date: new Date(Date.now() - 86400000).toDateString(), coins: 10 }
+          ]
+        },
+        watchTime: {
+          totalMinutes: 0,
+          date: new Date().toDateString(),
+          history: []
+        },
+        studyProgress: {
+          minutesWatchedToday: 0,
+          totalMinutesAvailable: 0,
+          progressPercentage: 0,
+          lastUpdated: new Date().toDateString()
+        }
       };
 
       const fileHandle = await window.showSaveFilePicker({
@@ -722,7 +826,7 @@ function App() {
       });
 
       const writable = await fileHandle.createWritable();
-      await writable.write(JSON.stringify(watchTimeData, null, 2));
+      await writable.write(JSON.stringify(coinData.watchTime, null, 2));
       await writable.close();
 
       // Store the file handle for future automatic saves
@@ -760,7 +864,14 @@ function App() {
           }
         }
         
-        setWatchTimeData(parsedData);
+        setCoinData(prev => ({
+          ...prev,
+          watchTime: {
+            ...prev.watchTime,
+            totalMinutes: parsedData.totalMinutes,
+            history: parsedData.history
+          }
+        }));
         // Store the file handle for future automatic saves
         setWatchTimeFileHandle(fileHandle);
         console.log('Watch time data loaded from file successfully!');
@@ -775,13 +886,27 @@ function App() {
   // Function to create sample watch time data file
   const createSampleWatchTimeDataFile = async () => {
     try {
-      const sampleData: WatchTimeData = {
-        totalMinutes: 45,
-        date: new Date().toDateString(),
-        history: [
-          { date: new Date().toDateString(), minutes: 15 },
-          { date: new Date(Date.now() - 86400000).toDateString(), minutes: 30 }
-        ]
+      const sampleData: StudyData = {
+        coins: {
+          totalCoins: 0,
+          earnedToday: 0,
+          date: new Date().toDateString(),
+          history: []
+        },
+        watchTime: {
+          totalMinutes: 45,
+          date: new Date().toDateString(),
+          history: [
+            { date: new Date().toDateString(), minutes: 15 },
+            { date: new Date(Date.now() - 86400000).toDateString(), minutes: 30 }
+          ]
+        },
+        studyProgress: {
+          minutesWatchedToday: 0,
+          totalMinutesAvailable: 0,
+          progressPercentage: 0,
+          lastUpdated: new Date().toDateString()
+        }
       };
 
       const fileHandle = await window.showSaveFilePicker({
@@ -1180,11 +1305,24 @@ function App() {
           if (combinedDirectory?.handle) {
             const newCoinsFileHandle = await combinedDirectory.handle.getFileHandle('coins_earned.json', { create: true });
             const writable = await newCoinsFileHandle.createWritable();
-            const initialCoinData: CoinData = {
-              totalCoins: 0,
-              earnedToday: 0,
-              date: new Date().toDateString(),
-              history: []
+            const initialCoinData: StudyData = {
+              coins: {
+                totalCoins: 0,
+                earnedToday: 0,
+                date: new Date().toDateString(),
+                history: []
+              },
+              watchTime: {
+                totalMinutes: 0,
+                date: new Date().toDateString(),
+                history: []
+              },
+              studyProgress: {
+                minutesWatchedToday: 0,
+                totalMinutesAvailable: 0,
+                progressPercentage: 0,
+                lastUpdated: new Date().toDateString()
+              }
             };
             await writable.write(JSON.stringify(initialCoinData, null, 2));
             await writable.close();
@@ -1199,11 +1337,24 @@ function App() {
             if (targetDir?.handle) {
               const newCoinsFileHandle = await targetDir.handle.getFileHandle('coins_earned.json', { create: true });
               const writable = await newCoinsFileHandle.createWritable();
-              const initialCoinData: CoinData = {
-                totalCoins: 0,
-                earnedToday: 0,
-                date: new Date().toDateString(),
-                history: []
+              const initialCoinData: StudyData = {
+                coins: {
+                  totalCoins: 0,
+                  earnedToday: 0,
+                  date: new Date().toDateString(),
+                  history: []
+                },
+                watchTime: {
+                  totalMinutes: 0,
+                  date: new Date().toDateString(),
+                  history: []
+                },
+                studyProgress: {
+                  minutesWatchedToday: 0,
+                  totalMinutesAvailable: 0,
+                  progressPercentage: 0,
+                  lastUpdated: new Date().toDateString()
+                }
               };
               await writable.write(JSON.stringify(initialCoinData, null, 2));
               await writable.close();
@@ -1226,10 +1377,24 @@ function App() {
           if (combinedDirectory?.handle) {
             const newWatchTimeFileHandle = await combinedDirectory.handle.getFileHandle('watch_time.json', { create: true });
             const writable = await newWatchTimeFileHandle.createWritable();
-            const initialWatchTimeData: WatchTimeData = {
-              totalMinutes: 0,
-              date: new Date().toDateString(),
-              history: []
+            const initialWatchTimeData: StudyData = {
+              coins: {
+                totalCoins: 0,
+                earnedToday: 0,
+                date: new Date().toDateString(),
+                history: []
+              },
+              watchTime: {
+                totalMinutes: 0,
+                date: new Date().toDateString(),
+                history: []
+              },
+              studyProgress: {
+                minutesWatchedToday: 0,
+                totalMinutesAvailable: 0,
+                progressPercentage: 0,
+                lastUpdated: new Date().toDateString()
+              }
             };
             await writable.write(JSON.stringify(initialWatchTimeData, null, 2));
             await writable.close();
@@ -1244,10 +1409,24 @@ function App() {
             if (targetDir?.handle) {
               const newWatchTimeFileHandle = await targetDir.handle.getFileHandle('watch_time.json', { create: true });
               const writable = await newWatchTimeFileHandle.createWritable();
-              const initialWatchTimeData: WatchTimeData = {
-                totalMinutes: 0,
-                date: new Date().toDateString(),
-                history: []
+              const initialWatchTimeData: StudyData = {
+                coins: {
+                  totalCoins: 0,
+                  earnedToday: 0,
+                  date: new Date().toDateString(),
+                  history: []
+                },
+                watchTime: {
+                  totalMinutes: 0,
+                  date: new Date().toDateString(),
+                  history: []
+                },
+                studyProgress: {
+                  minutesWatchedToday: 0,
+                  totalMinutesAvailable: 0,
+                  progressPercentage: 0,
+                  lastUpdated: new Date().toDateString()
+                }
               };
               await writable.write(JSON.stringify(initialWatchTimeData, null, 2));
               await writable.close();
@@ -1591,7 +1770,7 @@ function App() {
     
     setCoinData(prev => {
       // Clean any existing duplicates in the history
-      const cleanedHistory = removeDuplicateCoinEntries(prev.history);
+      const cleanedHistory = removeDuplicateCoinEntries(prev.coins.history);
       
       // Update today's entry or create new one
       const todayIndex = cleanedHistory.findIndex(entry => entry.date === today);
@@ -1604,12 +1783,16 @@ function App() {
         console.log(`💰 Created new coin entry for ${today}: ${amount} coins`);
       }
       
-      return {
-        totalCoins: prev.totalCoins + amount,
-        earnedToday: prev.date === today ? prev.earnedToday + amount : amount,
-        date: today,
-        history: cleanedHistory
-      };
+              return {
+          ...prev,
+          coins: {
+            ...prev.coins,
+            totalCoins: prev.coins.totalCoins + amount,
+            earnedToday: prev.coins.date === today ? prev.coins.earnedToday + amount : amount,
+            date: today,
+            history: cleanedHistory
+          }
+        };
     });
   };
 
@@ -1619,7 +1802,7 @@ function App() {
     
     setCoinData(prev => {
       // Clean any existing duplicates in the history
-      const cleanedHistory = removeDuplicateCoinEntries(prev.history);
+      const cleanedHistory = removeDuplicateCoinEntries(prev.coins.history);
       
       // Update today's entry
       const todayIndex = cleanedHistory.findIndex(entry => entry.date === today);
@@ -1632,12 +1815,16 @@ function App() {
         console.log(`💸 No existing coin entry found for ${today}, cannot remove coins`);
       }
       
-      return {
-        totalCoins: Math.max(0, prev.totalCoins - amount),
-        earnedToday: prev.date === today ? Math.max(0, prev.earnedToday - amount) : 0,
-        date: today,
-        history: cleanedHistory
-      };
+              return {
+          ...prev,
+          coins: {
+            ...prev.coins,
+            totalCoins: Math.max(0, prev.coins.totalCoins - amount),
+            earnedToday: prev.coins.date === today ? Math.max(0, prev.coins.earnedToday - amount) : 0,
+            date: today,
+            history: cleanedHistory
+          }
+        };
     });
   };
 
@@ -1683,9 +1870,9 @@ function App() {
   const updateWatchTimeData = (minutesWatched: number) => {
     const today = new Date().toDateString();
     
-    setWatchTimeData(prev => {
+    setCoinData(prev => {
       // Clean any existing duplicates in the history
-      const cleanedHistory = removeDuplicateWatchTimeEntries(prev.history);
+      const cleanedHistory = removeDuplicateWatchTimeEntries(prev.watchTime.history);
       
       // Update today's entry or create new one
       const todayIndex = cleanedHistory.findIndex(entry => entry.date === today);
@@ -1699,9 +1886,12 @@ function App() {
       }
       
       return {
-        totalMinutes: prev.totalMinutes + minutesWatched,
-        date: today,
-        history: cleanedHistory
+        ...prev,
+        watchTime: {
+          ...prev.watchTime,
+          totalMinutes: prev.watchTime.totalMinutes + minutesWatched,
+          history: cleanedHistory
+        }
       };
     });
   };
@@ -1869,7 +2059,7 @@ function App() {
       console.error('❌ Error clearing clips:', error);
       // If MongoDB save fails, at least clear localStorage as fallback
       try {
-        localStorage.setItem('clips', JSON.stringify([]));
+        localStorage.setItem('youinsta_clips', JSON.stringify([]));
         console.log('✅ Cleared clips from localStorage as fallback');
       } catch (localError) {
         console.error('❌ Error clearing clips from localStorage:', localError);
@@ -2060,7 +2250,7 @@ function App() {
           
           // Load memorized clips and coin data from JSON files
           let loadedMemorizedClips: ClipEntry[] = [];
-          let loadedCoinData: CoinData | null = null;
+          let loadedCoinData: StudyData | null = null;
           
           // Look for JSON files in the root of the selected directory
           for await (const entry of dirHandle.values()) {
@@ -2099,7 +2289,7 @@ function App() {
                     loadedCoinData = parsedCoinData;
                     // Store the file handle for automatic saves
                     setCoinsFileHandle(entry);
-                    console.log(`Successfully loaded coin data: ${parsedCoinData.totalCoins} total coins and set up automatic saving`);
+                    console.log(`Successfully loaded coin data: ${parsedCoinData.coins.totalCoins} total coins and set up automatic saving`);
                   }
                 } catch (error) {
                   console.warn('Could not parse coins_earned.json file:', error);
@@ -2153,12 +2343,12 @@ function App() {
           
           if (loadedCoinData) {
             // Clean duplicates one more time before setting the data
-            if (loadedCoinData.history && Array.isArray(loadedCoinData.history)) {
-              const originalHistoryLength = loadedCoinData.history.length;
-              loadedCoinData.history = removeDuplicateCoinEntries(loadedCoinData.history);
+            if (loadedCoinData.coins && loadedCoinData.coins.history && Array.isArray(loadedCoinData.coins.history)) {
+              const originalHistoryLength = loadedCoinData.coins.history.length;
+              loadedCoinData.coins.history = removeDuplicateCoinEntries(loadedCoinData.coins.history);
               
-              if (originalHistoryLength !== loadedCoinData.history.length) {
-                console.log(`🧹 Final cleanup: removed ${originalHistoryLength - loadedCoinData.history.length} duplicate entries`);
+              if (originalHistoryLength !== loadedCoinData.coins.history.length) {
+                console.log(`🧹 Final cleanup: removed ${originalHistoryLength - loadedCoinData.coins.history.length} duplicate entries`);
               }
             }
             
@@ -2371,7 +2561,7 @@ function App() {
     try {
       // First, try to load memorized clips and coin data from JSON files in the selected directory
       let loadedMemorizedClips: ClipEntry[] = [];
-      let loadedCoinData: CoinData | null = null;
+      let loadedCoinData: StudyData | null = null;
       
       try {
         const dirHandle = await window.showDirectoryPicker();
@@ -2428,7 +2618,7 @@ function App() {
                   loadedCoinData = parsedCoinData;
                   // Store the file handle for automatic saves
                   setCoinsFileHandle(entry);
-                  console.log(`Successfully loaded coin data: ${parsedCoinData.totalCoins} total coins and set up automatic saving`);
+                  console.log(`Successfully loaded coin data: ${parsedCoinData.coins.totalCoins} total coins and set up automatic saving`);
                 } else {
                   console.warn('coins_earned.json does not contain valid coin data');
                 }
@@ -2464,11 +2654,24 @@ function App() {
           try {
             const newCoinsFileHandle = await dirHandle.getFileHandle('coins_earned.json', { create: true });
             const writable = await newCoinsFileHandle.createWritable();
-            const initialCoinData: CoinData = {
-              totalCoins: 0,
-              earnedToday: 0,
-              date: new Date().toDateString(),
-              history: []
+            const initialCoinData: StudyData = {
+              coins: {
+                totalCoins: 0,
+                earnedToday: 0,
+                date: new Date().toDateString(),
+                history: []
+              },
+              watchTime: {
+                totalMinutes: 0,
+                date: new Date().toDateString(),
+                history: []
+              },
+              studyProgress: {
+                minutesWatchedToday: 0,
+                totalMinutesAvailable: 0,
+                progressPercentage: 0,
+                lastUpdated: new Date().toDateString()
+              }
             };
             await writable.write(JSON.stringify(initialCoinData, null, 2));
             await writable.close();
@@ -2498,7 +2701,14 @@ function App() {
               }
             }
             
-            setWatchTimeData(loadedWatchTimeData);
+            setCoinData(prev => ({
+              ...prev,
+              watchTime: {
+                ...prev.watchTime,
+                totalMinutes: loadedWatchTimeData.totalMinutes,
+                history: loadedWatchTimeData.history
+              }
+            }));
             watchTimeFileFound = true;
             console.log(`Successfully loaded watch time data: ${loadedWatchTimeData.totalMinutes} total minutes`);
           }
@@ -2514,10 +2724,24 @@ function App() {
           try {
             const newWatchTimeFileHandle = await dirHandle.getFileHandle('watch_time.json', { create: true });
             const writable = await newWatchTimeFileHandle.createWritable();
-            const initialWatchTimeData: WatchTimeData = {
-              totalMinutes: 0,
-              date: new Date().toDateString(),
-              history: []
+            const initialWatchTimeData: StudyData = {
+              coins: {
+                totalCoins: 0,
+                earnedToday: 0,
+                date: new Date().toDateString(),
+                history: []
+              },
+              watchTime: {
+                totalMinutes: 0,
+                date: new Date().toDateString(),
+                history: []
+              },
+              studyProgress: {
+                minutesWatchedToday: 0,
+                totalMinutesAvailable: 0,
+                progressPercentage: 0,
+                lastUpdated: new Date().toDateString()
+              }
             };
             await writable.write(JSON.stringify(initialWatchTimeData, null, 2));
             await writable.close();
@@ -2606,12 +2830,12 @@ function App() {
         
         if (loadedCoinData) {
           // Clean duplicates one more time before setting the data
-          if (loadedCoinData.history && Array.isArray(loadedCoinData.history)) {
-            const originalHistoryLength = loadedCoinData.history.length;
-            loadedCoinData.history = removeDuplicateCoinEntries(loadedCoinData.history);
+          if (loadedCoinData.coins && loadedCoinData.coins.history && Array.isArray(loadedCoinData.coins.history)) {
+            const originalHistoryLength = loadedCoinData.coins.history.length;
+            loadedCoinData.coins.history = removeDuplicateCoinEntries(loadedCoinData.coins.history);
             
-            if (originalHistoryLength !== loadedCoinData.history.length) {
-              console.log(`🧹 Final cleanup: removed ${originalHistoryLength - loadedCoinData.history.length} duplicate entries`);
+            if (originalHistoryLength !== loadedCoinData.coins.history.length) {
+              console.log(`🧹 Final cleanup: removed ${originalHistoryLength - loadedCoinData.coins.history.length} duplicate entries`);
             }
           }
           
@@ -2633,7 +2857,7 @@ function App() {
           } catch (error) {
             console.log('Could not get file handle for watch_time.json (will need manual save)');
           }
-          console.log(`Successfully loaded coin data: ${loadedCoinData.totalCoins} total coins`);
+          console.log(`Successfully loaded watch time data: ${loadedCoinData.watchTime.totalMinutes} total minutes`);
         }
         
         if (loadedMemorizedClips.length > 0 || loadedCoinData) {
@@ -3370,7 +3594,7 @@ function App() {
                 onLoadCoinDataFromFile={loadCoinDataFromFile}
                 onSaveCoinDataToFile={saveCoinDataToFile}
                 onCreateSampleCoinDataFile={createSampleCoinDataFile}
-                watchTimeData={watchTimeData}
+                watchTimeData={coinData.watchTime}
                 onLoadWatchTimeDataFromFile={loadWatchTimeDataFromFile}
                 onSaveWatchTimeDataToFile={saveWatchTimeDataToFile}
                 onCreateSampleWatchTimeDataFile={createSampleWatchTimeDataFile}

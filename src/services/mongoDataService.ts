@@ -17,6 +17,12 @@ interface LocalStorageCoinData {
   history: { date: string; coins: number }[];
 }
 
+interface LocalStorageWatchTimeData {
+  totalMinutes: number;
+  date: string;
+  history: { date: string; minutes: number }[];
+}
+
 export class MongoDataService {
   private static instance: MongoDataService;
   private useMongoDB = true;
@@ -184,11 +190,54 @@ export class MongoDataService {
         });
       } catch (error) {
         console.warn('Failed to save coin data to MongoDB, falling back to localStorage:', error);
-        this.useMongoDB = false;
         this.saveCoinDataToLocalStorage(coinData);
       }
     } else {
       this.saveCoinDataToLocalStorage(coinData);
+    }
+  }
+
+  /**
+   * Get watch time data
+   */
+  async getWatchTimeData(): Promise<LocalStorageWatchTimeData> {
+    if (this.useMongoDB) {
+      try {
+        const userPrefs = await apiService.getUserPreferences();
+        if (userPrefs && userPrefs.watchTimeData) {
+          return {
+            totalMinutes: userPrefs.watchTimeData.totalMinutes || 0,
+            date: userPrefs.watchTimeData.date || new Date().toDateString(),
+            history: userPrefs.watchTimeData.history || []
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to get watch time data from MongoDB, falling back to localStorage:', error);
+      }
+    }
+    
+    return this.getWatchTimeDataFromLocalStorage();
+  }
+
+  /**
+   * Save watch time data
+   */
+  async saveWatchTimeData(watchTimeData: LocalStorageWatchTimeData): Promise<void> {
+    if (this.useMongoDB) {
+      try {
+        await apiService.patchUserPreferences('default', {
+          watchTimeData: {
+            totalMinutes: watchTimeData.totalMinutes,
+            date: watchTimeData.date,
+            history: watchTimeData.history
+          }
+        });
+      } catch (error) {
+        console.warn('Failed to save watch time data to MongoDB, falling back to localStorage:', error);
+        this.saveWatchTimeDataToLocalStorage(watchTimeData);
+      }
+    } else {
+      this.saveWatchTimeDataToLocalStorage(watchTimeData);
     }
   }
 
@@ -405,6 +454,26 @@ export class MongoDataService {
 
   private saveCoinDataToLocalStorage(coinData: LocalStorageCoinData): void {
     localStorage.setItem('youinsta_coin_data', JSON.stringify(coinData));
+  }
+
+  private getWatchTimeDataFromLocalStorage(): LocalStorageWatchTimeData {
+    const watchTimeDataStr = localStorage.getItem('youinsta_watch_time_data');
+    if (watchTimeDataStr) {
+      try {
+        return JSON.parse(watchTimeDataStr);
+      } catch (error) {
+        console.warn('Failed to parse watch time data from localStorage:', error);
+      }
+    }
+    return {
+      totalMinutes: 0,
+      date: new Date().toDateString(),
+      history: []
+    };
+  }
+
+  private saveWatchTimeDataToLocalStorage(watchTimeData: LocalStorageWatchTimeData): void {
+    localStorage.setItem('youinsta_watch_time_data', JSON.stringify(watchTimeData));
   }
 
   private getClipsFromLocalStorage(): Clip[] {

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import VideoPlayer from './VideoPlayer';
-import { VideoFile, VideoWithRanges, ClipEntry, CoinData } from '../App';
+import { VideoFile, VideoWithRanges, ClipEntry, StudyData } from '../App';
 import './VideoFeed.css';
 
 interface VideoFeedProps {
@@ -15,7 +15,7 @@ interface VideoFeedProps {
   onBackToHome: () => void;
   markAsMemorized: (currentClip: VideoFile) => void;
   clips: ClipEntry[];
-  coinData: CoinData;
+  coinData: StudyData;
   isClipMemorized: (currentClip: VideoFile) => boolean;
   addToClips: (currentClip: VideoFile, watchPercentage: number) => Promise<void>;
   updateClipProgress: (currentClip: VideoFile, watchPercentage: number) => void;
@@ -312,10 +312,10 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
         {/* Coin Display */}
         <div className="coin-display" ref={coinDisplayRef}>
           <div className="coin-count">
-            🪙 {coinData.totalCoins}
+            🪙 {coinData.coins.totalCoins}
           </div>
           <div className="coin-earned-today">
-            Today: +{coinData.earnedToday}
+            Today: +{coinData.coins.earnedToday}
           </div>
         </div>
 
