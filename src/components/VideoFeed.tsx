@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import VideoPlayer from './VideoPlayer';
-import { VideoFile, VideoWithRanges, ClipEntry, CoinData } from '../App';
+import { VideoFile, VideoWithRanges, ClipEntry, StudyData } from '../App';
 import './VideoFeed.css';
 
 interface VideoFeedProps {
@@ -10,13 +10,15 @@ interface VideoFeedProps {
   getPreviousClip: () => Promise<VideoFile | null>;
   getCurrentClip: () => VideoFile | null;
   getInitialClip: () => Promise<VideoFile | null>;
-  onClear: () => void;
-  onAddMore: () => void;
+  onClear?: () => void;
+  onAddMore?: () => void;
+  onBackToHome: () => void;
   markAsMemorized: (currentClip: VideoFile) => void;
   clips: ClipEntry[];
-  coinData: CoinData;
+  coinData: StudyData;
   isClipMemorized: (currentClip: VideoFile) => boolean;
   addToClips: (currentClip: VideoFile, watchPercentage: number) => Promise<void>;
+  updateClipProgress: (currentClip: VideoFile, watchPercentage: number) => void;
   hasOverlappingWatchedClip: (currentClip: VideoFile) => boolean;
   onQuizAnswer: (isCorrect: boolean, currentClip: VideoFile | null) => void;
   onVideoChange?: () => void;
@@ -28,12 +30,13 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
   getNextClip, 
   getPreviousClip, 
   getInitialClip, 
-  onClear, 
-  // markAsMemorized,
-  // clips,
+  onBackToHome,
+  markAsMemorized,
+
   coinData,
-  // isClipMemorized,
+  isClipMemorized,
   addToClips,
+  updateClipProgress,
   hasOverlappingWatchedClip,
   onQuizAnswer,
   onVideoChange,
@@ -178,6 +181,13 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
     }
   };
 
+  const handleAutoScrollToNext = async () => {
+    const nextClip = await getNextClip();
+    if (nextClip) {
+      setCurrentVideo(nextClip);
+    }
+  };
+
   // const handleMemorizeClick = () => {
   //   if (currentVideo && !isMemorizeButtonDisabled) {
   //     const wasMemorized = isClipMemorized(currentVideo);
@@ -296,14 +306,23 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      {/* Back to Home Button */}
+      <button 
+        className="back-to-home-btn"
+        onClick={onBackToHome}
+        title="Back to Home"
+      >
+        ← Home
+      </button>
+
       <div className="video-container">
         {/* Coin Display */}
         <div className="coin-display" ref={coinDisplayRef}>
           <div className="coin-count">
-            🪙 {coinData.totalCoins}
+            🪙 {coinData.coins.totalCoins}
           </div>
           <div className="coin-earned-today">
-            Today: +{coinData.earnedToday}
+            Today: +{coinData.coins.earnedToday}
           </div>
         </div>
 
@@ -318,16 +337,22 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
           video={currentVideo}
           isPlaying={isPlaying}
           onPlayPause={() => setIsPlaying(!isPlaying)}
-          onProgressUpdate={() => {}}
-          onReach80Percent={async () => {
+          onProgressUpdate={(progress: number) => {
+            if (currentVideo) {
+              updateClipProgress(currentVideo, progress);
+            }
+          }}
+          onReach80Percent={async (progress: number) => {
             if (currentVideo && !hasReached80Percent && !isClipProcessedFor80Percent(currentVideo)) {
               setHasReached80Percent(true);
               // Add a small delay to prevent rapid successive calls
               setTimeout(async () => {
-                await addToClips(currentVideo, 80);
+                await addToClips(currentVideo, progress);
               }, 100);
             }
           }}
+          onAutoScrollToNext={handleAutoScrollToNext}
+          isRelaxClip={isRelaxClip(currentVideo)}
         />
         
         <div className="video-overlay">
@@ -345,15 +370,29 @@ const VideoFeed: React.FC<VideoFeedProps> = ({
               {isPlaying ? '⏸️' : '▶️'}
             </button>
             
-            <button 
+            {/* Clear button hidden for now */}
+            {/* <button 
               className="control-btn"
               onClick={onClear}
               title="Clear all videos"
             >
               🗑️
-            </button>
+            </button> */}
           </div>
         </div>
+
+        {/* Memorized Button - Only show for study videos */}
+        {!isRelaxClip(currentVideo) && (
+          <div className="memorized-button-container">
+            <button 
+              className={`memorized-btn ${isClipMemorized(currentVideo) ? 'memorized' : ''}`}
+              onClick={() => markAsMemorized(currentVideo)}
+              title={isClipMemorized(currentVideo) ? "Already memorized" : "Mark as memorized"}
+            >
+              {isClipMemorized(currentVideo) ? '🧠 Memorized' : '🧠 Mark as Memorized'}
+            </button>
+          </div>
+        )}
 
         {/* Quiz for repeated clips */}
         {showQuiz && (

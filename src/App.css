@@ -7,6 +7,28 @@
   scroll-behavior: smooth;
 }
 
+.main-content {
+  margin-left: 250px;
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Responsive design for main content */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 200px;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    margin-left: 180px;
+    padding: 10px;
+  }
+}
+
 /* Custom scrollbar styling for app container */
 .app::-webkit-scrollbar {
   width: 12px;
@@ -27,38 +49,149 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* Custom scrollbar styling */
-.home-screen::-webkit-scrollbar {
-  width: 8px;
+
+
+/* Home Coin Display */
+.home-coin-display {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.home-screen::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.home-screen::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  transition: background 0.3s ease;
-}
-
-.home-screen::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.home-screen {
-  width: 100%;
+.coin-info {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
+  gap: 8px;
+}
+
+.coin-info .coin-count {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.coin-info .coin-earned-today {
+  font-size: 14px;
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.coin-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.history-entry {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Coin Chart Container */
+.coin-chart-container {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.coin-chart-container h3 {
   color: white;
-  box-sizing: border-box;
-  padding: 20px;
-  padding-bottom: 40px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Coin File Buttons */
+.coin-file-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.load-coin-btn,
+.save-coin-btn,
+.create-coin-sample-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+}
+
+.load-coin-btn:hover,
+.save-coin-btn:hover,
+.create-coin-sample-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+}
+
+.save-coin-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.save-coin-btn:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.create-coin-sample-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.create-coin-sample-btn:hover {
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+/* Responsive design for coin display */
+@media (max-width: 768px) {
+  .home-coin-display {
+    text-align: center;
+  }
+  
+  .coin-file-buttons {
+    justify-content: center;
+  }
+  
+  .load-coin-btn,
+  .save-coin-btn,
+  .create-coin-sample-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .coin-file-buttons {
+    flex-direction: column;
+  }
+  
+  .coin-info .coin-count {
+    font-size: 20px;
+  }
+  
+  .coin-info .coin-earned-today {
+    font-size: 12px;
+  }
 }
 
 .content-management-section {
@@ -221,6 +354,26 @@
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
   background: linear-gradient(135deg, #1976D2, #1565C0);
+}
+
+.recalculate-ranges-btn {
+  background: linear-gradient(135deg, #FF9800, #F57C00);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.recalculate-ranges-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+  background: linear-gradient(135deg, #F57C00, #E65100);
 }
 
 .config-status {
@@ -555,6 +708,11 @@
     padding: 6px 12px;
     font-size: 11px;
   }
+  
+  .recalculate-ranges-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -614,6 +772,11 @@
   }
   
   .download-config-btn {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+  
+  .recalculate-ranges-btn {
     padding: 5px 10px;
     font-size: 10px;
   }
@@ -1304,6 +1467,14 @@
     font-size: 12px;
     padding: 8px 12px;
   }
+  
+  .coin-chart-container {
+    padding: 10px;
+  }
+  
+  .coin-chart-container h3 {
+    font-size: 1rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1317,6 +1488,152 @@
   
   .coin-info .coin-earned-today {
     font-size: 12px;
+  }
+  
+  .coin-chart-container {
+    padding: 8px;
+  }
+  
+  .coin-chart-container h3 {
+    font-size: 0.9rem;
+  }
+}
+
+/* Watching Progress Section */
+.watching-progress-section {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.watching-progress-section h3 {
+  color: white;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.progress-info {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.progress-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.progress-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #4ade80;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+  border-radius: 10px;
+  transition: width 0.5s ease;
+  box-shadow: 0 2px 8px rgba(74, 222, 128, 0.3);
+  position: relative;
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Responsive design for progress bar */
+@media (max-width: 768px) {
+  .watching-progress-section {
+    padding: 15px;
+  }
+  
+  .watching-progress-section h3 {
+    font-size: 1.1rem;
+  }
+  
+  .progress-stats {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  
+  .progress-stat {
+    padding: 10px;
+  }
+  
+  .stat-value {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .watching-progress-section {
+    padding: 12px;
+  }
+  
+  .watching-progress-section h3 {
+    font-size: 1rem;
+  }
+  
+  .progress-stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .progress-stat {
+    padding: 8px;
+  }
+  
+  .stat-value {
+    font-size: 14px;
   }
 }
 
@@ -1539,6 +1856,38 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.clips-file-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-indicator {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.status-indicator.enabled {
+  color: #4caf50;
+}
+
+.status-indicator.disabled {
+  color: #ff9800;
+}
+
+.status-note {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  font-style: italic;
+}
+
 .clips-file-buttons {
   display: flex;
   gap: 10px;
@@ -1639,6 +1988,18 @@
     margin: 15px 0;
   }
   
+  .clips-file-status {
+    padding: 8px;
+  }
+  
+  .status-indicator {
+    font-size: 13px;
+  }
+  
+    .status-note {
+    font-size: 11px;
+  }
+  
   .clips-section h2 {
     font-size: 1.2rem;
   }
@@ -1685,6 +2046,18 @@
   .clips-section {
     padding: 15px;
     margin: 10px 0;
+  }
+  
+  .clips-file-status {
+    padding: 6px;
+  }
+  
+  .status-indicator {
+    font-size: 12px;
+  }
+  
+  .status-note {
+    font-size: 10px;
   }
   
   .clips-section h2 {

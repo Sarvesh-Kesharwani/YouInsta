@@ -1,0 +1,605 @@
+.config-page {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.config-header {
+  text-align: center;
+  margin-bottom: 40px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 40px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.config-header h1 {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.config-header p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.2rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.config-content {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(10px);
+}
+
+.config-status-section {
+  margin-bottom: 30px;
+}
+
+.config-status {
+  margin-bottom: 15px;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.config-loaded {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.config-loading {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  animation: pulse 2s infinite;
+}
+
+.config-section {
+  margin-bottom: 30px;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.config-section h2 {
+  color: white;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Clip Duration Styles */
+.clip-duration-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.clip-duration-label {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.clip-duration-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.clip-duration-input {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  width: 60px;
+  text-align: center;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.clip-duration-input:focus {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.clip-duration-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.clip-duration-unit {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Random Clip Duration Styles */
+.random-clip-duration-container {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.random-clip-toggle {
+  margin-bottom: 15px;
+}
+
+.random-clip-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: white;
+  font-size: 14px;
+}
+
+.random-clip-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #4ade80;
+  cursor: pointer;
+}
+
+.random-clip-text {
+  user-select: none;
+}
+
+.random-clip-range {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.range-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.range-inputs {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.range-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.range-input-group label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.range-input {
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  font-size: 13px;
+  text-align: center;
+}
+
+.range-input:focus {
+  outline: none;
+  border-color: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+/* Video Probability Settings */
+.probability-description {
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.video-probability-container {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.probability-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.probability-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.probability-label {
+  color: white;
+  font-weight: 500;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.probability-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.probability-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.probability-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.probability-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.probability-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.probability-summary {
+  text-align: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.total-probability {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.warning {
+  color: #ff6b6b;
+  font-weight: 600;
+  animation: pulse 2s infinite;
+}
+
+/* Action Buttons */
+.config-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+.download-config-btn {
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.download-config-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+  background: linear-gradient(135deg, #1976D2, #1565C0);
+}
+
+.recalculate-ranges-btn {
+  background: linear-gradient(135deg, #FF9800, #F57C00);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.recalculate-ranges-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+  background: linear-gradient(135deg, #F57C00, #E65100);
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .config-page {
+    padding: 20px;
+  }
+
+  .config-header {
+    padding: 30px 20px;
+    margin-bottom: 30px;
+  }
+
+  .config-header h1 {
+    font-size: 2rem;
+  }
+
+  .config-header p {
+    font-size: 1rem;
+  }
+
+  .config-content {
+    padding: 20px;
+  }
+
+  .config-section {
+    padding: 20px;
+    margin-bottom: 25px;
+  }
+
+  .config-section h2 {
+    font-size: 1.3rem;
+  }
+
+  .clip-duration-container {
+    gap: 10px;
+  }
+
+  .clip-duration-label {
+    font-size: 13px;
+  }
+
+  .clip-duration-input-group {
+    padding: 6px 10px;
+  }
+
+  .clip-duration-input {
+    width: 50px;
+    font-size: 13px;
+    padding: 5px 8px;
+  }
+
+  .clip-duration-unit {
+    font-size: 11px;
+  }
+
+  .random-clip-duration-container {
+    padding: 15px;
+    margin: 12px 0;
+  }
+
+  .random-clip-label {
+    font-size: 13px;
+  }
+
+  .random-clip-checkbox {
+    width: 16px;
+    height: 16px;
+  }
+
+  .range-inputs {
+    gap: 12px;
+  }
+
+  .range-input {
+    width: 55px;
+    padding: 5px 6px;
+    font-size: 12px;
+  }
+
+  .video-probability-container {
+    padding: 15px;
+    margin: 15px 0;
+  }
+
+  .probability-description {
+    font-size: 0.85rem;
+  }
+
+  .probability-label {
+    font-size: 0.9rem;
+  }
+
+  .config-actions {
+    gap: 10px;
+  }
+
+  .download-config-btn,
+  .recalculate-ranges-btn {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .config-page {
+    padding: 15px;
+  }
+
+  .config-header {
+    padding: 25px 15px;
+    margin-bottom: 25px;
+  }
+
+  .config-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .config-header p {
+    font-size: 0.9rem;
+  }
+
+  .config-content {
+    padding: 15px;
+  }
+
+  .config-section {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .config-section h2 {
+    font-size: 1.2rem;
+  }
+
+  .clip-duration-container {
+    gap: 8px;
+  }
+
+  .clip-duration-label {
+    font-size: 12px;
+  }
+
+  .clip-duration-input-group {
+    padding: 5px 8px;
+  }
+
+  .clip-duration-input {
+    width: 45px;
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+
+  .clip-duration-unit {
+    font-size: 10px;
+  }
+
+  .random-clip-duration-container {
+    padding: 12px;
+    margin: 10px 0;
+  }
+
+  .random-clip-label {
+    font-size: 12px;
+  }
+
+  .random-clip-checkbox {
+    width: 15px;
+    height: 15px;
+  }
+
+  .range-inputs {
+    gap: 10px;
+  }
+
+  .range-input {
+    width: 50px;
+    padding: 4px 5px;
+    font-size: 11px;
+  }
+
+  .video-probability-container {
+    padding: 12px;
+    margin: 12px 0;
+  }
+
+  .probability-description {
+    font-size: 0.8rem;
+  }
+
+  .probability-label {
+    font-size: 0.85rem;
+  }
+
+  .probability-slider::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+  }
+
+  .probability-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+  }
+
+  .config-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .download-config-btn,
+  .recalculate-ranges-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+} 

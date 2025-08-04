@@ -35,7 +35,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({
           </div>
           
           <h1 className="upload-title">
-            {isUploading ? 'Processing...' : compact ? 'Upload Videos' : 'YouInsta'}
+            {isUploading ? 'Processing...' : compact ? 'Upload Videos' : 'Instalearn'}
           </h1>
           
           <p className="upload-subtitle">

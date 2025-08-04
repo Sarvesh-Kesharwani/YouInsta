@@ -1,0 +1,34 @@
+{
+  "name": "youinsta-server",
+  "version": "1.0.0",
+  "description": "Instalearn Backend Server with MongoDB Atlas",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "setup": "node setup-env.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "youinsta",
+    "mongodb",
+    "atlas",
+    "express",
+    "api"
+  ],
+  "author": "Instalearn Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "mongoose": "^7.0.3",
+    "recharts": "^3.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

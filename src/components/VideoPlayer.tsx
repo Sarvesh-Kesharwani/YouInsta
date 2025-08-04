@@ -7,10 +7,12 @@ interface VideoPlayerProps {
   isPlaying: boolean;
   onPlayPause: () => void;
   onProgressUpdate?: (progress: number) => void;
-  onReach80Percent?: () => void;
+  onReach80Percent?: (progress: number) => void;
+  onAutoScrollToNext?: () => void;
+  isRelaxClip?: boolean;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause, onProgressUpdate, onReach80Percent }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause, onProgressUpdate, onReach80Percent, onAutoScrollToNext, isRelaxClip }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -76,12 +78,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
         // Check if we've reached 80% and call the callback only once
         if (progressPercentage >= 80 && onReach80Percent && !hasCalled80Percent) {
           setHasCalled80Percent(true);
-          onReach80Percent();
+          onReach80Percent(progressPercentage);
         }
         
         // Check if we've reached the end of the clip
         if (video.endTime && videoElement.currentTime >= video.endTime) {
-          videoElement.currentTime = video.startTime;
+          // For relax clips, auto-scroll to next clip instead of looping
+          if (isRelaxClip && onAutoScrollToNext) {
+            onAutoScrollToNext();
+          } else {
+            // For study clips, loop back to start
+            videoElement.currentTime = video.startTime;
+          }
         }
       } else {
         setCurrentTime(videoElement.currentTime);
@@ -96,7 +104,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
         // Check if we've reached 80% and call the callback only once
         if (progressPercentage >= 80 && onReach80Percent && !hasCalled80Percent) {
           setHasCalled80Percent(true);
-          onReach80Percent();
+          onReach80Percent(progressPercentage);
         }
       }
     };
@@ -107,13 +115,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isPlaying, onPlayPause
     };
 
     const handleEnded = () => {
-      // For clips, loop back to start time, for regular videos loop to beginning
-      if (video.isClip && video.startTime !== undefined) {
-        videoElement.currentTime = video.startTime;
+      // For relax clips, auto-scroll to next clip instead of looping
+      if (isRelaxClip && onAutoScrollToNext) {
+        onAutoScrollToNext();
       } else {
-        videoElement.currentTime = 0;
+        // For study clips and regular videos, loop back to start
+        if (video.isClip && video.startTime !== undefined) {
+          videoElement.currentTime = video.startTime;
+        } else {
+          videoElement.currentTime = 0;
+        }
+        videoElement.play();
       }
-      videoElement.play();
     };
 
     const handleCanPlay = () => {
